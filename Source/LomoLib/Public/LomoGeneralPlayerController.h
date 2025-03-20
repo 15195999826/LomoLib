@@ -69,5 +69,6 @@ protected:
 	bool bHasSpringCamera = false;
 	TWeakObjectPtr<ASpringArmCameraActor> SpringArmCamera;
 	// 自行在代码中调用, 场景中必须已经放置了相机才会生效
+	UFUNCTION(BlueprintCallable)
 	void UseSpringCamera(const FName& InCameraTag);
 };
