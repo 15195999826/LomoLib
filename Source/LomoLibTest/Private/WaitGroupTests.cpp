@@ -3,12 +3,21 @@
 #include "LomoWaitGroup.h"
 #include "Misc/AutomationTest.h"
 
-// 定义测试类
+#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 5
+	// UE5 specific flags
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+FWaitGroupTest,
+"LomoLib.WaitGroup",  // 测试路径，方便分类和过滤
+EAutomationTestFlags_ApplicationContextMask | EAutomationTestFlags::ProductFilter
+);
+#else
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FWaitGroupTest,
-	"LomoLib.WaitGroup",  // 测试路径，方便分类和过滤
-	EAutomationTestFlags_ApplicationContextMask | EAutomationTestFlags::ProductFilter
+	"LomoLib.WaitGroup", // 测试路径，方便分类和过滤
+	EAutomationTestFlags::ApplicationContextMask | EAutomationTestFlags::ProductFilter
 );
+#endif
+
 
 bool FWaitGroupTest::RunTest(const FString& Parameters)
 {
