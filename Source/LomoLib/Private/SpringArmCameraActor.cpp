@@ -110,6 +110,13 @@ void ASpringArmCameraActor::Tick(float DeltaSeconds)
 
 void ASpringArmCameraActor::OnMoveCamera(const FInputActionValue& InputActionValue)
 {
+	APlayerController* PC = Cast<APlayerController>(GetWorld()->GetFirstPlayerController());
+	if (PC && PC->IsInputKeyDown(EKeys::LeftControl) || PC->IsInputKeyDown(EKeys::RightControl))
+	{
+		// Ctrl键被按下，不执行移动逻辑
+		return;
+	}
+	
 	auto InputVector = InputActionValue.Get<FVector2D>();
 	// Get the current yaw rotation of the camera boom
 	FRotator CameraRotation = CameraBoom->GetComponentRotation();

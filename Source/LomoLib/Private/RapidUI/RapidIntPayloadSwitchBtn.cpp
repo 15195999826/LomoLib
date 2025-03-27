@@ -17,6 +17,11 @@ void URapidIntPayloadSwitchBtn::NativeSetActive(bool bInActive)
 
 void URapidIntPayloadSwitchBtn::NativeOnBtnClickedHandler(int32 OutIntPayload)
 {
+	if (!CanClickInvoke)
+	{
+		return;
+	}
+	
 	bActive = !bActive;
 	OnGroupButtonActive.Broadcast(this, OutIntPayload, bActive);
 }

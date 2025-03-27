@@ -56,6 +56,8 @@ protected:
 	TObjectPtr<UInputAction> MoveCameraAxisAction;
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "TheOne Enhanced Camera | Inputs")
 	TObjectPtr<UInputAction> ZoomCameraAction;
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "TheOne Enhanced Camera | Inputs")
+	TObjectPtr<UInputAction> CtrlPressingAction;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TheOne Enhanced Camera | Movement Settings")
 	float DesiredZoom = 10.f;

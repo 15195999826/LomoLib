@@ -215,14 +215,14 @@ FReply SStructToJsonWidget::OnExportToJsonClicked()
     {
         TArray<FString> SaveFilenames;
         FString DefaultPath = FPaths::ProjectContentDir();
-        FString DefaultFile = SelectedStruct->GetName() + TEXT(".json");
+        FString DefaultFile = SelectedStruct->GetName() + TEXT(".txt");
 
         const bool bFileSelected = DesktopPlatform->SaveFileDialog(
             FSlateApplication::Get().GetActiveTopLevelWindow()->GetNativeWindow()->GetOSWindowHandle(),
             TEXT("保存JSON文件"),
             DefaultPath,
             DefaultFile,
-            TEXT("JSON文件|*.json"),
+            TEXT("JSON文件|*.txt"),
             EFileDialogFlags::None,
             SaveFilenames
         );

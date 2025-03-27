@@ -50,8 +50,13 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void DeActiveAll();
 
+	/**
+	 * 会
+	 * @param InIndex
+	 * @param bNotify 是否触发OnChangeActiveButton
+	 */
 	UFUNCTION(BlueprintCallable)
-	void SetDefaultActiveButton(int32 InIndex);
+	void SetDefaultActiveButton(int32 InIndex, bool bNotify = true);
 
 protected:
 	UFUNCTION(BlueprintCallable)
@@ -65,6 +70,9 @@ protected:
 
 	UFUNCTION()
 	void OnButtonActive(URapidIntPayloadSwitchBtn* InGroupButton, int32 InIntPayload, bool IsActive);
+
+private:
+	bool bAbandonNotifyOneTime{false};
 };
 
 

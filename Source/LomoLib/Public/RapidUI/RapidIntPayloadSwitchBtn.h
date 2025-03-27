@@ -27,8 +27,15 @@ public:
 	FOnSwitchButtonClicked OnGroupButtonActive;
 
 	void NativeSetActive(bool bInActive);
+
+	void NativeSetClickInvoke(bool bCanInvoke)
+	{
+		CanClickInvoke = bCanInvoke;
+	}
 	
 protected:
+	UPROPERTY()
+	bool CanClickInvoke = true;
 	// 选中状态
 	UPROPERTY(BlueprintReadWrite)
 	bool bActive = false;

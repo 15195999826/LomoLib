@@ -67,11 +67,12 @@ void URapidButtonGroup::DeActiveAll()
 	}
 }
 
-void URapidButtonGroup::SetDefaultActiveButton(int32 InIndex)
+void URapidButtonGroup::SetDefaultActiveButton(int32 InIndex,bool bNotify)
 {
 	URapidIntPayloadSwitchBtn* Btn = Cast<URapidIntPayloadSwitchBtn>(ButtonContainer->GetChildAt(InIndex));
 	if (Btn)
 	{
+		bAbandonNotifyOneTime = !bNotify;
 		Btn->NativeSetActive(true);
 	}
 }
@@ -86,9 +87,19 @@ void URapidButtonGroup::OnButtonActive(URapidIntPayloadSwitchBtn* InGroupButton,
 	if (ActiveButton.IsValid())
 	{
 		ActiveButton->NativeSetActive(false);
+		ActiveButton->NativeSetClickInvoke(true);
 	}
 
 	ActiveButton = InGroupButton;
 
+	// 增加一个设定， 激活后不会触发ActiveButton的Click功能
+	ActiveButton->NativeSetClickInvoke(false);
+	
+	if (bAbandonNotifyOneTime)
+	{
+		bAbandonNotifyOneTime = false;
+		return;
+	}
+	
 	OnChangeActiveButton.Broadcast(InIntPayload);
 }
