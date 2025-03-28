@@ -71,6 +71,6 @@ void URapidArrayElementWidget::NativeConstruct()
     // 绑定初始事件 - 在蓝图构造后执行
     if (DeleteButton)
     {
-        DeleteButton->OnClicked.AddDynamic(this, &URapidArrayElementWidget::HandleDeleteButtonClicked);
+        // DeleteButton->OnClicked.AddDynamic(this, &URapidArrayElementWidget::HandleDeleteButtonClicked);
     }
 } 

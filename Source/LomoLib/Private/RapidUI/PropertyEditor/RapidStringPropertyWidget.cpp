@@ -62,7 +62,8 @@ void URapidStringPropertyWidget::UpdateValue_Implementation()
         FStrProperty* StrProperty = CastField<FStrProperty>(Property);
         if (StrProperty)
         {
-            CurrentValue = StrProperty->GetPropertyValue(ValuePtr);
+            FString StrPtr = StrProperty->GetPropertyValue(ValuePtr);
+            CurrentValue = TEXT("");
             DisplayText = FText::FromString(CurrentValue);
         }
     }
