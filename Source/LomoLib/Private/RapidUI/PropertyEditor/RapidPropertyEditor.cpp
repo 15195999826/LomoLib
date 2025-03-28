@@ -11,7 +11,6 @@
 #include "Components/ExpandableArea.h"
 #include "Components/Border.h"
 #include "Components/Button.h"
-#include "Components/ComboBoxString.h"
 #include "UObject/UnrealType.h"
 #include "UObject/PropertyPortFlags.h"
 #include "Internationalization/Text.h"
@@ -25,42 +24,6 @@ void URapidPropertyEditor::NativeDestruct()
 {
     Super::NativeDestruct();
     ClearObject();
-}
-
-void URapidPropertyEditor::SetWidgetTemplates(TSubclassOf<UUserWidget> InLabelClass, 
-                                           TSubclassOf<USpinBox> InFloatSpinBoxClass,
-                                           TSubclassOf<USpinBox> InIntSpinBoxClass,
-                                           TSubclassOf<UEditableTextBox> InTextBoxClass,
-                                           TSubclassOf<UCheckBox> InCheckBoxClass,
-                                           TSubclassOf<UComboBoxString> InComboBoxClass)
-{
-    LabelTemplateClass = InLabelClass;
-    FloatSpinBoxTemplateClass = InFloatSpinBoxClass;
-    IntSpinBoxTemplateClass = InIntSpinBoxClass;
-    TextBoxTemplateClass = InTextBoxClass;
-    CheckBoxTemplateClass = InCheckBoxClass;
-    ComboBoxTemplateClass = InComboBoxClass;
-    
-    // 如果当前有对象，刷新显示
-    if (TargetObject)
-    {
-        Refresh();
-    }
-}
-
-template<class WidgetClass>
-WidgetClass* URapidPropertyEditor::CreateWidgetFromTemplate(TSubclassOf<WidgetClass> TemplateClass)
-{
-    if (TemplateClass)
-    {
-        // 使用模板类创建控件
-        return CreateWidget<WidgetClass>(this, TemplateClass);
-    }
-    else
-    {
-        // 如果没有提供模板，使用默认方式创建
-        return NewObject<WidgetClass>(this);
-    }
 }
 
 bool URapidPropertyEditor::SetObject(UObject* InObject)
@@ -192,18 +155,6 @@ UWidget* URapidPropertyEditor::CreatePropertyWidget(FProperty* Property, void* P
     {
         return CreateMapPropertyWidget(CastField<FMapProperty>(Property), PropertyValue);
     }
-    
-    // 增加对枚举类型的支持
-    if (Property->IsA<FEnumProperty>())
-    {
-        return CreateEnumPropertyWidget(CastField<FEnumProperty>(Property), PropertyValue);
-    }
-    
-    // 旧版UE中，枚举类型通常用FByteProperty表示
-    if (Property->IsA<FByteProperty>() && CastField<FByteProperty>(Property)->IsEnum())
-    {
-        return CreateBytePropertyWidget(CastField<FByteProperty>(Property), PropertyValue);
-    }
 
     return CreateBasicPropertyWidget(Property, PropertyValue);
 }
@@ -213,7 +164,7 @@ UWidget* URapidPropertyEditor::CreateBasicPropertyWidget(FProperty* Property, vo
     if (Property->IsA<FFloatProperty>())
     {
         // 创建Float编辑控件
-        USpinBox* SpinBox = CreateWidgetFromTemplate<USpinBox>(FloatSpinBoxTemplateClass);
+        USpinBox* SpinBox = NewObject<USpinBox>(this);
         FFloatProperty* FloatProperty = CastField<FFloatProperty>(Property);
         float Value = FloatProperty->GetPropertyValue(PropertyValue);
         
@@ -231,7 +182,7 @@ UWidget* URapidPropertyEditor::CreateBasicPropertyWidget(FProperty* Property, vo
     if (Property->IsA<FIntProperty>())
     {
         // 创建Int编辑控件
-        USpinBox* SpinBox = CreateWidgetFromTemplate<USpinBox>(IntSpinBoxTemplateClass);
+        USpinBox* SpinBox = NewObject<USpinBox>(this);
         FIntProperty* IntProperty = CastField<FIntProperty>(Property);
         int32 Value = IntProperty->GetPropertyValue(PropertyValue);
         
@@ -250,7 +201,7 @@ UWidget* URapidPropertyEditor::CreateBasicPropertyWidget(FProperty* Property, vo
     if (Property->IsA<FBoolProperty>())
     {
         // 创建Bool编辑控件
-        UCheckBox* CheckBox = CreateWidgetFromTemplate<UCheckBox>(CheckBoxTemplateClass);
+        UCheckBox* CheckBox = NewObject<UCheckBox>(this);
         FBoolProperty* BoolProperty = CastField<FBoolProperty>(Property);
         bool Value = BoolProperty->GetPropertyValue(PropertyValue);
         
@@ -264,7 +215,7 @@ UWidget* URapidPropertyEditor::CreateBasicPropertyWidget(FProperty* Property, vo
     if (Property->IsA<FStrProperty>())
     {
         // 创建String编辑控件
-        UEditableTextBox* TextBox = CreateWidgetFromTemplate<UEditableTextBox>(TextBoxTemplateClass);
+        UEditableTextBox* TextBox = NewObject<UEditableTextBox>(this);
         FStrProperty* StrProperty = CastField<FStrProperty>(Property);
         FString Value = StrProperty->GetPropertyValue(PropertyValue);
         
@@ -279,7 +230,7 @@ UWidget* URapidPropertyEditor::CreateBasicPropertyWidget(FProperty* Property, vo
     if (Property->IsA<FNameProperty>())
     {
         // 创建Name编辑控件
-        UEditableTextBox* TextBox = CreateWidgetFromTemplate<UEditableTextBox>(TextBoxTemplateClass);
+        UEditableTextBox* TextBox = NewObject<UEditableTextBox>(this);
         FNameProperty* NameProperty = CastField<FNameProperty>(Property);
         FName Value = NameProperty->GetPropertyValue(PropertyValue);
         
@@ -294,7 +245,7 @@ UWidget* URapidPropertyEditor::CreateBasicPropertyWidget(FProperty* Property, vo
     if (Property->IsA<FTextProperty>())
     {
         // 创建Text编辑控件
-        UEditableTextBox* TextBox = CreateWidgetFromTemplate<UEditableTextBox>(TextBoxTemplateClass);
+        UEditableTextBox* TextBox = NewObject<UEditableTextBox>(this);
         FTextProperty* TextProperty = CastField<FTextProperty>(Property);
         FText Value = TextProperty->GetPropertyValue(PropertyValue);
         
@@ -309,7 +260,6 @@ UWidget* URapidPropertyEditor::CreateBasicPropertyWidget(FProperty* Property, vo
     // 对于其他不支持的类型，显示文本表示
     UTextBlock* TextBlock = NewObject<UTextBlock>(this);
     FString ValueStr;
-    // Property->ExportTextItem(ValueStr, PropertyValue, nullptr, TargetObject, PPF_None);
     TextBlock->SetText(FText::FromString(ValueStr));
     return TextBlock;
 }
@@ -501,27 +451,11 @@ UWidget* URapidPropertyEditor::CreatePropertyRow(const FString& PropertyName, UW
     UHorizontalBox* HorizontalBox = NewObject<UHorizontalBox>(this);
     
     // 添加属性名标签
-    UTextBlock* PropertyNameText;
+    UTextBlock* PropertyNameText = NewObject<UTextBlock>(this);
+    PropertyNameText->SetText(FText::FromString(PropertyName + ": "));
     
-    if (LabelTemplateClass)
-    {
-        // 使用模板创建标签
-        UUserWidget* LabelWidget = CreateWidget<UUserWidget>(this, LabelTemplateClass);
-        UTextBlock* TextBlock = Cast<UTextBlock>(LabelWidget->GetWidgetFromName(TEXT("Label")));
-        if (TextBlock)
-        {
-            TextBlock->SetText(FText::FromString(PropertyName + ": "));
-        }
-        PropertyNameText = TextBlock;
-        HorizontalBox->AddChild(LabelWidget);
-    }
-    else
-    {
-        // 使用默认方式创建标签
-        PropertyNameText = NewObject<UTextBlock>(this);
-        PropertyNameText->SetText(FText::FromString(PropertyName + ": "));
-        HorizontalBox->AddChild(PropertyNameText);
-    }
+    // 添加到布局
+    HorizontalBox->AddChild(PropertyNameText);
     
     // 添加值控件
     HorizontalBox->AddChild(ValueWidget);
@@ -761,219 +695,4 @@ void URapidPropertyEditor::NotifyPropertyChanged(FName PropertyName, FProperty* 
 {
     // 广播属性改变事件
     // OnPropertyChanged.Broadcast(TargetObject, PropertyName, Property);
-}
-
-UWidget* URapidPropertyEditor::CreateEnumPropertyWidget(FEnumProperty* EnumProperty, void* PropertyValue)
-{
-    if (!EnumProperty || !PropertyValue)
-    {
-        return nullptr;
-    }
-    
-    // 创建下拉框控件
-    UComboBoxString* ComboBox = CreateWidgetFromTemplate<UComboBoxString>(ComboBoxTemplateClass);
-    
-    // 获取枚举类型
-    UEnum* Enum = EnumProperty->GetEnum();
-    
-    // 获取当前枚举值
-    FNumericProperty* UnderlyingProperty = EnumProperty->GetUnderlyingProperty();
-    int64 EnumValue = UnderlyingProperty->GetSignedIntPropertyValue(PropertyValue);
-    
-    // 填充所有枚举项
-    int32 EnumCount = Enum->NumEnums();
-    FString CurrentSelection;
-    
-    for (int32 i = 0; i < EnumCount; i++)
-    {
-        // 跳过隐藏的枚举项(比如以UMETA(Hidden)标记的项)
-        if (Enum->HasMetaData(TEXT("Hidden"), i))
-        {
-            continue;
-        }
-        
-        // 获取枚举的值和名称
-        int64 Value = Enum->GetValueByIndex(i);
-        FString DisplayName = Enum->GetDisplayNameTextByIndex(i).ToString();
-        if (DisplayName.IsEmpty())
-        {
-            DisplayName = Enum->GetNameStringByIndex(i);
-        }
-        
-        // 将枚举项添加到下拉框
-        ComboBox->AddOption(DisplayName);
-        
-        // 如果是当前值，设置为选中项
-        if (Value == EnumValue)
-        {
-            CurrentSelection = DisplayName;
-        }
-    }
-    
-    // 设置当前选中项
-    ComboBox->SetSelectedOption(CurrentSelection);
-    
-    // 绑定选择变化事件
-    ComboBox->OnSelectionChanged.AddDynamic(this, &URapidPropertyEditor::HandleEnumValueChanged);
-    
-    return ComboBox;
-}
-
-UWidget* URapidPropertyEditor::CreateBytePropertyWidget(FByteProperty* ByteProperty, void* PropertyValue)
-{
-    if (!ByteProperty || !PropertyValue || !ByteProperty->IsEnum())
-    {
-        return nullptr;
-    }
-    
-    // 创建下拉框控件
-    UComboBoxString* ComboBox = CreateWidgetFromTemplate<UComboBoxString>(ComboBoxTemplateClass);
-    
-    // 获取枚举类型
-    UEnum* Enum = ByteProperty->Enum;
-    
-    // 获取当前枚举值
-    uint8 EnumValue = ByteProperty->GetPropertyValue(PropertyValue);
-    
-    // 填充所有枚举项
-    int32 EnumCount = Enum->NumEnums();
-    FString CurrentSelection;
-    
-    for (int32 i = 0; i < EnumCount; i++)
-    {
-        // 跳过隐藏的枚举项
-        if (Enum->HasMetaData(TEXT("Hidden"), i))
-        {
-            continue;
-        }
-        
-        // 获取枚举的值和名称
-        int64 Value = Enum->GetValueByIndex(i);
-        FString DisplayName = Enum->GetDisplayNameTextByIndex(i).ToString();
-        if (DisplayName.IsEmpty())
-        {
-            DisplayName = Enum->GetNameStringByIndex(i);
-        }
-        
-        // 将枚举项添加到下拉框
-        ComboBox->AddOption(DisplayName);
-        
-        // 如果是当前值，设置为选中项
-        if (Value == EnumValue)
-        {
-            CurrentSelection = DisplayName;
-        }
-    }
-    
-    // 设置当前选中项
-    ComboBox->SetSelectedOption(CurrentSelection);
-    
-    // 绑定选择变化事件
-    ComboBox->OnSelectionChanged.AddDynamic(this, &URapidPropertyEditor::HandleEnumValueChanged);
-    
-    return ComboBox;
-}
-
-void URapidPropertyEditor::HandleEnumValueChanged(FString SelectedItem, ESelectInfo::Type SelectionType)
-{
-    // if (!TargetObject || SelectionType != ESelectInfo::OnSelectionChanged)
-    // {
-    //     return;
-    // }
-    //
-    // // 获取触发事件的控件
-    // UWidget* Sender = Cast<UWidget>(GetOwningPlayerPawn()->GetInstigator());
-    // if (!Sender)
-    // {
-    //     return;
-    // }
-    //
-    // // 获取属性名称
-    // FName PropertyName = GetPropertyNameFromWidget(Sender);
-    // if (PropertyName.IsNone())
-    // {
-    //     return;
-    // }
-    //
-    // FProperty* Property = TargetObject->GetClass()->FindPropertyByName(PropertyName);
-    // if (!Property)
-    // {
-    //     return;
-    // }
-    //
-    // UEnum* Enum = nullptr;
-    // int64 CurrentValue = 0;
-    //
-    // // 获取枚举对象和当前值
-    // if (Property->IsA<FEnumProperty>())
-    // {
-    //     FEnumProperty* EnumProperty = CastField<FEnumProperty>(Property);
-    //     Enum = EnumProperty->GetEnum();
-    //     
-    //     // 获取当前枚举值
-    //     void* PropertyValuePtr = Property->ContainerPtrToValuePtr<void>(TargetObject);
-    //     FNumericProperty* UnderlyingProperty = EnumProperty->GetUnderlyingProperty();
-    //     CurrentValue = UnderlyingProperty->GetSignedIntPropertyValue(PropertyValuePtr);
-    // }
-    // else if (Property->IsA<FByteProperty>() && CastField<FByteProperty>(Property)->IsEnum())
-    // {
-    //     FByteProperty* ByteProperty = CastField<FByteProperty>(Property);
-    //     Enum = ByteProperty->Enum;
-    //     
-    //     // 获取当前枚举值
-    //     void* PropertyValuePtr = Property->ContainerPtrToValuePtr<void>(TargetObject);
-    //     CurrentValue = ByteProperty->GetPropertyValue(PropertyValuePtr);
-    // }
-    //
-    // if (Enum)
-    // {
-    //     // 查找选择的枚举值
-    //     for (int32 i = 0; i < Enum->NumEnums(); i++)
-    //     {
-    //         FString DisplayName = Enum->GetDisplayNameTextByIndex(i).ToString();
-    //         if (DisplayName.IsEmpty())
-    //         {
-    //             DisplayName = Enum->GetNameStringByIndex(i);
-    //         }
-    //         
-    //         if (DisplayName == SelectedItem)
-    //         {
-    //             // 找到了选择的枚举值，更新属性
-    //             int64 NewValue = Enum->GetValueByIndex(i);
-    //             
-    //             if (Property->IsA<FEnumProperty>())
-    //             {
-    //                 FEnumProperty* EnumProperty = CastField<FEnumProperty>(Property);
-    //                 void* PropertyValuePtr = Property->ContainerPtrToValuePtr<void>(TargetObject);
-    //                 FNumericProperty* UnderlyingProperty = EnumProperty->GetUnderlyingProperty();
-    //                 
-    //                 if (UnderlyingProperty->IsA<FByteProperty>())
-    //                 {
-    //                     uint8 Value = static_cast<uint8>(NewValue);
-    //                     UnderlyingProperty->SetIntPropertyValue(PropertyValuePtr, Value);
-    //                 }
-    //                 else if (UnderlyingProperty->IsA<FIntProperty>())
-    //                 {
-    //                     int32 Value = static_cast<int32>(NewValue);
-    //                     UnderlyingProperty->SetIntPropertyValue(PropertyValuePtr, Value);
-    //                 }
-    //                 else if (UnderlyingProperty->IsA<FInt64Property>())
-    //                 {
-    //                     UnderlyingProperty->SetIntPropertyValue(PropertyValuePtr, NewValue);
-    //                 }
-    //             }
-    //             else if (Property->IsA<FByteProperty>())
-    //             {
-    //                 FByteProperty* ByteProperty = CastField<FByteProperty>(Property);
-    //                 void* PropertyValuePtr = Property->ContainerPtrToValuePtr<void>(TargetObject);
-    //                 uint8 Value = static_cast<uint8>(NewValue);
-    //                 ByteProperty->SetPropertyValue(PropertyValuePtr, Value);
-    //             }
-    //             
-    //             // 通知属性改变
-    //             NotifyPropertyChanged(PropertyName, Property);
-    //             break;
-    //         }
-    //     }
-    // }
 } 
