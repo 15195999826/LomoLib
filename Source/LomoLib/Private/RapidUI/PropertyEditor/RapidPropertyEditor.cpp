@@ -6,41 +6,10 @@
 #include "UObject/UnrealType.h"
 #include "UObject/PropertyPortFlags.h"
 #include "RapidUI/PropertyEditor/RapidPropertyWidget.h"
-#include "RapidUI/PropertyEditor/RapidFloatPropertyWidget.h"
-#include "RapidUI/PropertyEditor/RapidIntPropertyWidget.h"
-#include "RapidUI/PropertyEditor/RapidBoolPropertyWidget.h"
-#include "RapidUI/PropertyEditor/RapidStringPropertyWidget.h"
-#include "RapidUI/PropertyEditor/RapidStructPropertyWidget.h"
 
 void URapidPropertyEditor::NativeConstruct()
 {
     Super::NativeConstruct();
-    
-    // 初始化默认控件类引用
-    if (!FloatPropertyWidgetClass)
-    {
-        FloatPropertyWidgetClass = URapidFloatPropertyWidget::StaticClass();
-    }
-    
-    if (!IntPropertyWidgetClass)
-    {
-        IntPropertyWidgetClass = URapidIntPropertyWidget::StaticClass();
-    }
-    
-    if (!BoolPropertyWidgetClass)
-    {
-        BoolPropertyWidgetClass = URapidBoolPropertyWidget::StaticClass();
-    }
-    
-    if (!StringPropertyWidgetClass)
-    {
-        StringPropertyWidgetClass = URapidStringPropertyWidget::StaticClass();
-    }
-    
-    if (!StructPropertyWidgetClass)
-    {
-        StructPropertyWidgetClass = URapidStructPropertyWidget::StaticClass();
-    }
 }
 
 void URapidPropertyEditor::NativeDestruct()
@@ -188,6 +157,14 @@ URapidPropertyWidget* URapidPropertyEditor::CreatePropertyWidget(FProperty* Prop
     else if (Property->IsA<FStructProperty>() && StructPropertyWidgetClass)
     {
         Widget = CreateWidget<URapidPropertyWidget>(this, StructPropertyWidgetClass);
+    }
+    else if (Property->IsA<FArrayProperty>() && ArrayPropertyWidgetClass)
+    {
+        Widget = CreateWidget<URapidPropertyWidget>(this, ArrayPropertyWidgetClass);
+    }
+    else if (Property->IsA<FMapProperty>() && MapPropertyWidgetClass)
+    {
+        Widget = CreateWidget<URapidPropertyWidget>(this, MapPropertyWidgetClass);
     }
     
     return Widget;
