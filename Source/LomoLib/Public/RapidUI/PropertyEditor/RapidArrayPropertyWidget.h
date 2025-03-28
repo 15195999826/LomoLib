@@ -1,5 +1,3 @@
- 
-
 #pragma once
 
 #include "CoreMinimal.h"
@@ -11,6 +9,7 @@ class UExpandableArea;
 class UVerticalBox;
 class UButton;
 class UScrollBox;
+class URapidArrayElementWidget;
 
 /**
  * 数组类型的属性控件，支持TArray
@@ -28,6 +27,14 @@ public:
     
     // 重写更新值方法
     virtual void UpdateValue_Implementation() override;
+
+    /** 获取元素小部件类 */
+    UFUNCTION(BlueprintCallable, Category = "Property Widget")
+    TSubclassOf<URapidArrayElementWidget> GetElementWidgetClass() const;
+    
+    /** 设置元素小部件类 */
+    UFUNCTION(BlueprintCallable, Category = "Property Widget")
+    void SetElementWidgetClass(TSubclassOf<URapidArrayElementWidget> InElementWidgetClass);
     
 protected:
     // 标题文本
@@ -46,6 +53,10 @@ protected:
     UPROPERTY(BlueprintReadOnly, meta = (BindWidget))
     UButton* AddElementButton;
     
+    // 元素小部件类 - 用于创建数组元素界面 
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Property Widget")
+    TSubclassOf<URapidArrayElementWidget> ElementWidgetClass;
+    
     // 处理添加元素按钮点击事件
     UFUNCTION()
     void HandleAddElementClicked();
@@ -63,7 +74,7 @@ private:
     void CreateElementWidgets();
     
     // 创建单个数组元素控件
-    URapidPropertyWidget* CreateElementWidget(int32 ElementIndex);
+    void CreateElementWidget(int32 ElementIndex);
     
     // 更新所有元素的显示
     void UpdateElementWidgets();
@@ -74,7 +85,7 @@ private:
     // 内部数组元素属性
     FProperty* InnerProperty;
     
-    // 生成的元素属性控件
+    // 生成的元素小部件
     UPROPERTY()
-    TArray<URapidPropertyWidget*> ElementWidgets;
+    TArray<URapidArrayElementWidget*> ElementUWidgets;
 };

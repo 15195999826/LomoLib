@@ -9,6 +9,7 @@
 #include "UObject/UnrealType.h"
 #include "UObject/PropertyPortFlags.h"
 #include "RapidUI/PropertyEditor/RapidPropertyEditor.h"
+#include "RapidUI/PropertyEditor/RapidArrayElementWidget.h"
 
 URapidArrayPropertyWidget::URapidArrayPropertyWidget(const FObjectInitializer& ObjectInitializer)
     : Super(ObjectInitializer)
@@ -52,6 +53,22 @@ void URapidArrayPropertyWidget::InitializePropertyWidget(UObject* InObject, FPro
     CreateElementWidgets();
 }
 
+TSubclassOf<URapidArrayElementWidget> URapidArrayPropertyWidget::GetElementWidgetClass() const
+{
+    return ElementWidgetClass;
+}
+
+void URapidArrayPropertyWidget::SetElementWidgetClass(TSubclassOf<URapidArrayElementWidget> InElementWidgetClass)
+{
+    ElementWidgetClass = InElementWidgetClass;
+    
+    // 如果已有数据，则重新创建元素控件
+    if (ArrayProperty && InnerProperty && ValuePtr)
+    {
+        CreateElementWidgets();
+    }
+}
+
 void URapidArrayPropertyWidget::UpdateValue_Implementation()
 {
     // 刷新元素控件显示
@@ -67,7 +84,7 @@ void URapidArrayPropertyWidget::CreateElementWidgets()
     
     // 清除现有控件
     ContentVerticalBox->ClearChildren();
-    ElementWidgets.Empty();
+    ElementUWidgets.Empty();
     
     // 获取数组辅助类
     FScriptArrayHelper ArrayHelper(ArrayProperty, ValuePtr);
@@ -75,20 +92,15 @@ void URapidArrayPropertyWidget::CreateElementWidgets()
     // 遍历数组元素创建控件
     for (int32 Index = 0; Index < ArrayHelper.Num(); ++Index)
     {
-        URapidPropertyWidget* ElementWidget = CreateElementWidget(Index);
-        if (ElementWidget)
-        {
-            ElementWidgets.Add(ElementWidget);
-            ContentVerticalBox->AddChild(ElementWidget);
-        }
+        CreateElementWidget(Index);
     }
 }
 
-URapidPropertyWidget* URapidArrayPropertyWidget::CreateElementWidget(int32 ElementIndex)
+void URapidArrayPropertyWidget::CreateElementWidget(int32 ElementIndex)
 {
     if (!ArrayProperty || !InnerProperty || !TargetObject)
     {
-        return nullptr;
+        return;
     }
     
     // 获取数组辅助类
@@ -97,79 +109,54 @@ URapidPropertyWidget* URapidArrayPropertyWidget::CreateElementWidget(int32 Eleme
     // 检查索引是否有效
     if (!ArrayHelper.IsValidIndex(ElementIndex))
     {
-        return nullptr;
+        return;
     }
     
     // 获取元素地址
     void* ElementValuePtr = ArrayHelper.GetRawPtr(ElementIndex);
     
-    // 创建水平布局用于包含元素控件和删除按钮
-    UHorizontalBox* ElementRow = NewObject<UHorizontalBox>(this);
-    ElementRow->SetVisibility(ESlateVisibility::SelfHitTestInvisible);
-    
-    // 创建边框包含索引标签
-    UBorder* IndexBorder = NewObject<UBorder>(this);
-    IndexBorder->SetPadding(FMargin(5, 2));
-    
-    // 创建索引标签
-    UTextBlock* IndexText = NewObject<UTextBlock>(this);
-    IndexText->SetText(FText::AsNumber(ElementIndex));
-    IndexBorder->SetContent(IndexText);
-    
-    // 添加索引标签到行
-    ElementRow->AddChild(IndexBorder);
-    
-    // 创建元素内容容器
-    UBorder* ElementBorder = NewObject<UBorder>(this);
-    ElementBorder->SetPadding(FMargin(5, 2));
-    
     // 获取属性编辑器
     URapidPropertyEditor* PropertyEditor = Cast<URapidPropertyEditor>(GetTypedOuter<URapidPropertyEditor>());
     if (!PropertyEditor)
     {
-        return nullptr;
+        return;
     }
     
-    // 创建元素属性控件 - 使用辅助函数
-    URapidPropertyWidget* ElementWidget = PropertyEditor->CreatePropertyWidgetForType(this, InnerProperty);
+    // 创建元素属性控件
+    URapidPropertyWidget* ElementPropertyWidget = PropertyEditor->CreatePropertyWidgetForType(this, InnerProperty);
     
-    if (ElementWidget)
+    if (!ElementPropertyWidget)
     {
-        // 初始化元素控件
-        ElementWidget->InitializePropertyWidget(TargetObject, InnerProperty, ElementValuePtr);
-        
-        // 设置元素名称为索引
-        ElementWidget->SetPropertyName(*FString::Printf(TEXT("%s[%d]"), *PropertyName.ToString(), ElementIndex));
-        ElementWidget->SetPropertyDisplayName(FText::AsNumber(ElementIndex));
-        
-        // 绑定值变化事件
-        ElementWidget->OnPropertyValueChanged.AddDynamic(this, &URapidArrayPropertyWidget::HandleChildPropertyValueChanged);
-        
-        // 设置元素内容
-        ElementBorder->SetContent(ElementWidget);
+        return;
     }
     
-    // 添加元素内容到行
-    ElementRow->AddChild(ElementBorder);
+    // 初始化元素控件
+    ElementPropertyWidget->InitializePropertyWidget(TargetObject, InnerProperty, ElementValuePtr);
     
-    // 创建删除按钮
-    UButton* DeleteButton = NewObject<UButton>(this);
-    DeleteButton->SetToolTipText(FText::FromString(TEXT("删除元素")));
+    // 设置元素名称为索引
+    ElementPropertyWidget->SetPropertyName(*FString::Printf(TEXT("%s[%d]"), *PropertyName.ToString(), ElementIndex));
+    ElementPropertyWidget->SetPropertyDisplayName(FText::AsNumber(ElementIndex));
     
-    // 绑定删除按钮事件
-    FScriptDelegate DeleteDelegate;
-    DeleteDelegate.BindUFunction(this, "HandleElementDeleteClicked");
-    DeleteButton->OnClicked.Add(DeleteDelegate);
+    // 绑定值变化事件
+    ElementPropertyWidget->OnPropertyValueChanged.AddDynamic(this, &URapidArrayPropertyWidget::HandleChildPropertyValueChanged);
     
-    // 创建删除按钮文本
-    UTextBlock* DeleteText = NewObject<UTextBlock>(this);
-    DeleteText->SetText(FText::FromString(TEXT("X")));
-    DeleteButton->SetContent(DeleteText);
+    // 检查是否指定了元素小部件类
+    check(ElementWidgetClass)
+    // 创建自定义元素小部件
+    URapidArrayElementWidget* ElementUWidget = CreateWidget<URapidArrayElementWidget>(this, ElementWidgetClass);
+    ElementUWidget->InitializeElementWidget(TargetObject, InnerProperty, ElementValuePtr, ElementIndex);
+            
+    // 设置属性控件
+    ElementUWidget->SetElementPropertyWidget(ElementPropertyWidget);
+            
+    // 绑定删除事件
+    ElementUWidget->OnDeleteElementClicked.AddDynamic(this, &URapidArrayPropertyWidget::HandleElementDeleteClicked);
+            
+    // 添加到数组中
+    ElementUWidgets.Add(ElementUWidget);
     
-    // 添加删除按钮到行
-    ElementRow->AddChild(DeleteButton);
-    
-    return Cast<URapidPropertyWidget>(ElementRow);
+    // 添加到内容垂直框
+    ContentVerticalBox->AddChild(ElementUWidget);
 }
 
 void URapidArrayPropertyWidget::UpdateElementWidgets()
@@ -181,7 +168,7 @@ void URapidArrayPropertyWidget::UpdateElementWidgets()
     
     // 检查数组元素数量是否发生变化
     FScriptArrayHelper ArrayHelper(ArrayProperty, ValuePtr);
-    if (ArrayHelper.Num() != ElementWidgets.Num())
+    if (ArrayHelper.Num() != ElementUWidgets.Num())
     {
         // 数组大小改变，需要重新创建所有元素控件
         CreateElementWidgets();
@@ -189,11 +176,11 @@ void URapidArrayPropertyWidget::UpdateElementWidgets()
     }
     
     // 更新现有控件的值
-    for (int32 Index = 0; Index < ElementWidgets.Num(); ++Index)
+    for (int32 Index = 0; Index < ElementUWidgets.Num(); ++Index)
     {
-        if (ElementWidgets[Index])
+        if (ElementUWidgets[Index])
         {
-            ElementWidgets[Index]->UpdateValue();
+            ElementUWidgets[Index]->UpdateValue();
         }
     }
 }
@@ -216,12 +203,7 @@ void URapidArrayPropertyWidget::HandleAddElementClicked()
     InnerProperty->InitializeValue(NewElementPtr);
     
     // 创建新元素的控件
-    URapidPropertyWidget* ElementWidget = CreateElementWidget(NewIndex);
-    if (ElementWidget)
-    {
-        ElementWidgets.Add(ElementWidget);
-        ContentVerticalBox->AddChild(ElementWidget);
-    }
+    CreateElementWidget(NewIndex);
     
     // 通知值改变
     NotifyPropertyValueChanged();

@@ -1,5 +1,3 @@
- 
-
 #pragma once
 
 #include "CoreMinimal.h"
@@ -11,6 +9,7 @@ class UExpandableArea;
 class UVerticalBox;
 class UButton;
 class UScrollBox;
+class URapidMapElementWidget;
 
 /**
  * 映射类型的属性控件，支持TMap
@@ -29,6 +28,14 @@ public:
     // 重写更新值方法
     virtual void UpdateValue_Implementation() override;
     
+    /** 获取元素小部件类 */
+    UFUNCTION(BlueprintCallable, Category = "Property Widget")
+    TSubclassOf<URapidMapElementWidget> GetElementWidgetClass() const;
+    
+    /** 设置元素小部件类 */
+    UFUNCTION(BlueprintCallable, Category = "Property Widget")
+    void SetElementWidgetClass(TSubclassOf<URapidMapElementWidget> InElementWidgetClass);
+    
 protected:
     // 标题文本
     UPROPERTY(BlueprintReadOnly, meta = (BindWidget))
@@ -45,6 +52,10 @@ protected:
     // 添加元素按钮
     UPROPERTY(BlueprintReadOnly, meta = (BindWidget))
     UButton* AddElementButton;
+    
+    // 元素小部件类 - 用于创建映射元素界面 
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Property Widget")
+    TSubclassOf<URapidMapElementWidget> ElementWidgetClass;
     
     // 处理添加元素按钮点击事件
     UFUNCTION()
@@ -63,7 +74,7 @@ private:
     void CreatePairWidgets();
     
     // 创建单个映射元素控件
-    URapidPropertyWidget* CreatePairWidget(int32 PairIndex);
+    void CreatePairWidget(int32 PairIndex);
     
     // 更新所有元素的显示
     void UpdatePairWidgets();
@@ -77,7 +88,7 @@ private:
     // 内部值属性
     FProperty* ValueProperty;
     
-    // 生成的映射元素控件
+    // 生成的元素小部件
     UPROPERTY()
-    TArray<URapidPropertyWidget*> PairWidgets;
+    TArray<URapidMapElementWidget*> ElementUWidgets;
 };
