@@ -1,5 +1,3 @@
- 
-
 #include "RapidUI/PropertyEditor/RapidArrayPropertyWidget.h"
 #include "Components/TextBlock.h"
 #include "Components/ExpandableArea.h"
@@ -132,38 +130,8 @@ URapidPropertyWidget* URapidArrayPropertyWidget::CreateElementWidget(int32 Eleme
         return nullptr;
     }
     
-    // 创建元素属性控件
-    URapidPropertyWidget* ElementWidget = nullptr;
-    
-    // 根据内部属性类型创建控件
-    if (InnerProperty->IsA<FFloatProperty>() && PropertyEditor->GetFloatPropertyWidgetClass())
-    {
-        ElementWidget = CreateWidget<URapidPropertyWidget>(this, PropertyEditor->GetFloatPropertyWidgetClass());
-    }
-    else if (InnerProperty->IsA<FIntProperty>() && PropertyEditor->GetIntPropertyWidgetClass())
-    {
-        ElementWidget = CreateWidget<URapidPropertyWidget>(this, PropertyEditor->GetIntPropertyWidgetClass());
-    }
-    else if (InnerProperty->IsA<FBoolProperty>() && PropertyEditor->GetBoolPropertyWidgetClass())
-    {
-        ElementWidget = CreateWidget<URapidPropertyWidget>(this, PropertyEditor->GetBoolPropertyWidgetClass());
-    }
-    else if ((InnerProperty->IsA<FStrProperty>() || InnerProperty->IsA<FNameProperty>() || InnerProperty->IsA<FTextProperty>()) && PropertyEditor->GetStringPropertyWidgetClass())
-    {
-        ElementWidget = CreateWidget<URapidPropertyWidget>(this, PropertyEditor->GetStringPropertyWidgetClass());
-    }
-    else if (InnerProperty->IsA<FStructProperty>() && PropertyEditor->GetStructPropertyWidgetClass())
-    {
-        ElementWidget = CreateWidget<URapidPropertyWidget>(this, PropertyEditor->GetStructPropertyWidgetClass());
-    }
-    else if (InnerProperty->IsA<FArrayProperty>() && PropertyEditor->GetArrayPropertyWidgetClass())
-    {
-        ElementWidget = CreateWidget<URapidPropertyWidget>(this, PropertyEditor->GetArrayPropertyWidgetClass());
-    }
-    else if (InnerProperty->IsA<FMapProperty>() && PropertyEditor->GetMapPropertyWidgetClass())
-    {
-        ElementWidget = CreateWidget<URapidPropertyWidget>(this, PropertyEditor->GetMapPropertyWidgetClass());
-    }
+    // 创建元素属性控件 - 使用辅助函数
+    URapidPropertyWidget* ElementWidget = PropertyEditor->CreatePropertyWidgetForType(this, InnerProperty);
     
     if (ElementWidget)
     {
@@ -190,7 +158,7 @@ URapidPropertyWidget* URapidArrayPropertyWidget::CreateElementWidget(int32 Eleme
     
     // 绑定删除按钮事件
     FScriptDelegate DeleteDelegate;
-    DeleteDelegate.BindUFunction(this, "HandleElementDeleteClicked", ElementIndex);
+    DeleteDelegate.BindUFunction(this, "HandleElementDeleteClicked");
     DeleteButton->OnClicked.Add(DeleteDelegate);
     
     // 创建删除按钮文本

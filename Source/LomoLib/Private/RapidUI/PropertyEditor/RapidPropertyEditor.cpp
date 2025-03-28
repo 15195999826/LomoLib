@@ -71,6 +71,66 @@ void URapidPropertyEditor::ClearObject()
     TargetObject = nullptr;
 }
 
+TObjectPtr<URapidPropertyWidget> URapidPropertyEditor::CreatePropertyWidgetForType(UUserWidget* InOuter, const FProperty* InProperty)
+{
+    if (!InProperty)
+    {
+        return nullptr;
+    }
+
+    // 定义属性类型检查辅助函数
+    auto IsStringProperty = [](const FProperty* Prop) -> bool {
+        return Prop->IsA<FStrProperty>() || Prop->IsA<FNameProperty>() || Prop->IsA<FTextProperty>();
+    };
+
+    auto IsEnumProperty = [](const FProperty* Prop) -> bool {
+        if (Prop->IsA<FEnumProperty>())
+            return true;
+        if (const FByteProperty* ByteProp = CastField<FByteProperty>(Prop))
+            return ByteProp->IsEnum();
+        return false;
+    };
+
+    TSubclassOf<URapidPropertyWidget> WidgetClass = nullptr;
+
+    if (InProperty->IsA<FFloatProperty>())
+    {
+        WidgetClass = FloatPropertyWidgetClass;
+    }
+    else if (InProperty->IsA<FIntProperty>())
+    {
+        WidgetClass = IntPropertyWidgetClass;
+    }
+    else if (InProperty->IsA<FBoolProperty>())
+    {
+        WidgetClass = BoolPropertyWidgetClass;
+    }
+    else if (IsStringProperty(InProperty))
+    {
+        WidgetClass = StringPropertyWidgetClass;
+    }
+    else if (IsEnumProperty(InProperty))
+    {
+        WidgetClass = StringPropertyWidgetClass;
+    }
+    else if (InProperty->IsA<FStructProperty>())
+    {
+        WidgetClass = StructPropertyWidgetClass;
+    }
+    else if (InProperty->IsA<FArrayProperty>())
+    {
+        WidgetClass = ArrayPropertyWidgetClass;
+    }
+    else if (InProperty->IsA<FMapProperty>())
+    {
+        WidgetClass = MapPropertyWidgetClass;
+    }
+
+    check(WidgetClass);
+
+    return CreateWidget<URapidPropertyWidget>(InOuter, WidgetClass);
+}
+
 void URapidPropertyEditor::RenderProperties()
 {
     if (!ContentScrollBox || !TargetObject)
@@ -109,65 +169,20 @@ void URapidPropertyEditor::RenderProperties()
         void* PropertyValuePtr = Property->ContainerPtrToValuePtr<void>(TargetObject);
         
         // 创建属性控件
-        URapidPropertyWidget* PropertyWidget = CreatePropertyWidget(Property, PropertyValuePtr);
+        auto PropertyWidget = CreatePropertyWidgetForType(this, Property);
         
-        if (PropertyWidget)
-        {
-            // 初始化属性控件
-            PropertyWidget->InitializePropertyWidget(TargetObject, Property, PropertyValuePtr);
+        // 初始化属性控件
+        PropertyWidget->InitializePropertyWidget(TargetObject, Property, PropertyValuePtr);
             
-            // 绑定属性值变化事件
-            PropertyWidget->OnPropertyValueChanged.AddDynamic(this, &URapidPropertyEditor::HandlePropertyValueChanged);
+        // 绑定属性值变化事件
+        PropertyWidget->OnPropertyValueChanged.AddDynamic(this, &URapidPropertyEditor::HandlePropertyValueChanged);
             
-            // 添加到主容器
-            MainVerticalBox->AddChild(PropertyWidget);
+        // 添加到主容器
+        MainVerticalBox->AddChild(PropertyWidget);
             
-            // 添加到控件列表
-            PropertyWidgets.Add(PropertyWidget);
-        }
+        // 添加到控件列表
+        PropertyWidgets.Add(PropertyWidget);
     }
-}
-
-URapidPropertyWidget* URapidPropertyEditor::CreatePropertyWidget(FProperty* Property, void* PropertyValue)
-{
-    if (!Property || !PropertyValue)
-    {
-        return nullptr;
-    }
-    
-    URapidPropertyWidget* Widget = nullptr;
-    
-    // 根据属性类型创建不同的控件
-    if (Property->IsA<FFloatProperty>() && FloatPropertyWidgetClass)
-    {
-        Widget = CreateWidget<URapidPropertyWidget>(this, FloatPropertyWidgetClass);
-    }
-    else if (Property->IsA<FIntProperty>() && IntPropertyWidgetClass)
-    {
-        Widget = CreateWidget<URapidPropertyWidget>(this, IntPropertyWidgetClass);
-    }
-    else if (Property->IsA<FBoolProperty>() && BoolPropertyWidgetClass)
-    {
-        Widget = CreateWidget<URapidPropertyWidget>(this, BoolPropertyWidgetClass);
-    }
-    else if ((Property->IsA<FStrProperty>() || Property->IsA<FNameProperty>() || Property->IsA<FTextProperty>()) && StringPropertyWidgetClass)
-    {
-        Widget = CreateWidget<URapidPropertyWidget>(this, StringPropertyWidgetClass);
-    }
-    else if (Property->IsA<FStructProperty>() && StructPropertyWidgetClass)
-    {
-        Widget = CreateWidget<URapidPropertyWidget>(this, StructPropertyWidgetClass);
-    }
-    else if (Property->IsA<FArrayProperty>() && ArrayPropertyWidgetClass)
-    {
-        Widget = CreateWidget<URapidPropertyWidget>(this, ArrayPropertyWidgetClass);
-    }
-    else if (Property->IsA<FMapProperty>() && MapPropertyWidgetClass)
-    {
-        Widget = CreateWidget<URapidPropertyWidget>(this, MapPropertyWidgetClass);
-    }
-    
-    return Widget;
 }
 
 void URapidPropertyEditor::HandlePropertyValueChanged(UObject* Object, FName PropertyName, URapidPropertyWidget* PropertyWidget)

@@ -121,6 +121,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Property Editor")
 	void ClearObject();
 
+	TObjectPtr<URapidPropertyWidget> CreatePropertyWidgetForType(UUserWidget* InOuter, const FProperty* InProperty);
 	/**
 	 * 属性改变时触发的委托
 	 */
@@ -169,9 +170,6 @@ protected:
 
 	/** 创建并渲染属性面板内容 */
 	void RenderProperties();
-
-	/** 创建单个属性的控件 */
-	URapidPropertyWidget* CreatePropertyWidget(FProperty* Property, void* PropertyValue);
 
 	/** 处理属性值改变 */
 	UFUNCTION()
