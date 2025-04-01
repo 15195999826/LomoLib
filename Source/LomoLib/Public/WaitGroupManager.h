@@ -8,7 +8,7 @@
 #include "WaitGroupManager.generated.h"
 
 /**
- * 
+ * 注意事项： 未处理多线程的Counter竞争问题， 子线程WG需要放到主线程上Done
  */
 UCLASS()
 class LOMOLIB_API UWaitGroupManager : public UWorldSubsystem
@@ -16,19 +16,14 @@ class LOMOLIB_API UWaitGroupManager : public UWorldSubsystem
 	GENERATED_BODY()
 
 public:
+	virtual void BeginDestroy() override;
+	
+public:
 	static int32 EmptyID;
 	// 从管理器获取新的 WaitGroup
 	TTuple<int32, TSharedRef<FLomoWaitGroup>> CreateWaitGroup(const FName& InWGDebugName);
 
 	TSharedPtr<FLomoWaitGroup> FindWaitGroup(int32 InID);
-
-	// 清理所有活跃的 WaitGroup
-	void CleanupAllWaitGroups();
-
-	// UWorldSubsystem interface
-	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
-	
-	virtual void Deinitialize() override;
 
 private:
 	int32 NextWaitGroupID = 0;
@@ -37,4 +32,7 @@ private:
 
 	// 当 WaitGroup 完成时的回调
 	void OnWaitGroupCompleted(int32 InID);
+
+	// 清理所有活跃的 WaitGroup
+	void CleanupAllWaitGroups();
 };

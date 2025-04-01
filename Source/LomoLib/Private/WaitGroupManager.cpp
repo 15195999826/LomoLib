@@ -5,6 +5,12 @@
 
 int32 UWaitGroupManager::EmptyID = -1;
 
+void UWaitGroupManager::BeginDestroy()
+{
+	CleanupAllWaitGroups();
+	Super::BeginDestroy();
+}
+
 TTuple<int32, TSharedRef<FLomoWaitGroup>> UWaitGroupManager::CreateWaitGroup(const FName& InWGDebugName)
 {
 	const int32 CurrentID = NextWaitGroupID++;
@@ -58,16 +64,6 @@ void UWaitGroupManager::CleanupAllWaitGroups()
 
 	// 3. 最后清空容器（此时回调已解绑，状态已重置）
 	ActiveWaitGroups.Empty();
-}
-
-void UWaitGroupManager::Initialize(FSubsystemCollectionBase& Collection)
-{
-	Super::Initialize(Collection);
-}
-
-void UWaitGroupManager::Deinitialize()
-{
-	Super::Deinitialize();
 }
 
 void UWaitGroupManager::OnWaitGroupCompleted(int32 InID)
