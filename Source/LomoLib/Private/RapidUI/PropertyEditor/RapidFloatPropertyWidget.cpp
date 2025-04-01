@@ -22,14 +22,12 @@ void URapidFloatPropertyWidget::SetupSpinBoxFromProperty()
     // 从元数据中读取最小最大值
     if (Property->HasMetaData(TEXT("ClampMin")))
     {
-        float MinValue = FCString::Atof(*Property->GetMetaData(TEXT("ClampMin")));
-        ValueSpinBox->SetMinValue(MinValue);
+        ValueSpinBox->SetMinValue(FCString::Atof(*Property->GetMetaData(TEXT("ClampMin"))));
     }
     
     if (Property->HasMetaData(TEXT("ClampMax")))
     {
-        float MaxValue = FCString::Atof(*Property->GetMetaData(TEXT("ClampMax")));
-        ValueSpinBox->SetMaxValue(MaxValue);
+        ValueSpinBox->SetMaxValue(FCString::Atof(*Property->GetMetaData(TEXT("ClampMax"))));
     }
 }
 
@@ -56,16 +54,14 @@ bool URapidFloatPropertyWidget::InitializePropertyWidget(UObject* InObject, FPro
         return false;
     }
     
-    // 设置属性名称文本 - PropertyNameText由BindWidget保证不为空
+    // 设置属性名称文本
     PropertyNameText->SetText(PropertyDisplayName);
     
-    // 绑定SpinBox事件 - ValueSpinBox由BindWidget保证不为空
+    // 绑定SpinBox事件
     ValueSpinBox->OnValueChanged.AddDynamic(this, &URapidFloatPropertyWidget::HandleValueChanged);
     
     // 设置SpinBox属性
-    SafeExecute([&]() {
-        SetupSpinBoxFromProperty();
-    }, TEXT("初始化SpinBox属性失败"));
+    SetupSpinBoxFromProperty();
     
     // 更新初始值
     UpdateValue();
@@ -75,19 +71,12 @@ bool URapidFloatPropertyWidget::InitializePropertyWidget(UObject* InObject, FPro
 void URapidFloatPropertyWidget::UpdateValue_Implementation()
 {
     SafeExecute([&]() {
-        // 初始化当前值
-        CurrentValue = 0.0f;
-        
+        // 获取属性值
         FFloatProperty* FloatProperty = CastField<FFloatProperty>(Property);
         if (FloatProperty && TargetObject)
         {
-            // 安全地获取属性值
             CurrentValue = FloatProperty->GetPropertyValue_InContainer(TargetObject);
-            
-            // 更新UI - ValueSpinBox由BindWidget保证不为空
             ValueSpinBox->SetValue(CurrentValue);
-            
-            // 确保属性名称文本正确显示 - PropertyNameText由BindWidget保证不为空
             PropertyNameText->SetText(PropertyDisplayName);
         }
     }, TEXT("更新Float属性值失败"));
@@ -119,13 +108,13 @@ bool URapidFloatPropertyWidget::SetValue(float InValue)
         FloatProperty->SetPropertyValue_InContainer(TargetObject, InValue);
         CurrentValue = InValue;
         
-        // 只更新当值不同时 - ValueSpinBox由BindWidget保证不为空
+        // 只更新当值不同时
         if (!FMath::IsNearlyEqual(ValueSpinBox->GetValue(), InValue))
         {
             ValueSpinBox->SetValue(InValue);
         }
         
-        // 确保属性名称文本正确显示 - PropertyNameText由BindWidget保证不为空
+        // 确保属性名称文本正确显示
         PropertyNameText->SetText(PropertyDisplayName);
         
         // 通知属性值已更改
@@ -136,14 +125,12 @@ bool URapidFloatPropertyWidget::SetValue(float InValue)
 
 float URapidFloatPropertyWidget::GetValue() const
 {
-    // 直接返回缓存值，无需重新从属性获取
     return CurrentValue;
 }
 
 void URapidFloatPropertyWidget::HandleValueChanged(float NewValue)
 {
     SafeExecute([&, NewValue]() {
-        // 只有在值发生变化时才更新
         if (!FMath::IsNearlyEqual(CurrentValue, NewValue))
         {
             SetValue(NewValue);

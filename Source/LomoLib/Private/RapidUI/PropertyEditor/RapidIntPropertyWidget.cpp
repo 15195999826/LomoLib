@@ -22,14 +22,12 @@ void URapidIntPropertyWidget::SetupSpinBoxFromProperty()
     // 从元数据中读取最小最大值
     if (Property->HasMetaData(TEXT("ClampMin")))
     {
-        int32 MinValue = FCString::Atoi(*Property->GetMetaData(TEXT("ClampMin")));
-        ValueSpinBox->SetMinValue(MinValue);
+        ValueSpinBox->SetMinValue(FCString::Atoi(*Property->GetMetaData(TEXT("ClampMin"))));
     }
     
     if (Property->HasMetaData(TEXT("ClampMax")))
     {
-        int32 MaxValue = FCString::Atoi(*Property->GetMetaData(TEXT("ClampMax")));
-        ValueSpinBox->SetMaxValue(MaxValue);
+        ValueSpinBox->SetMaxValue(FCString::Atoi(*Property->GetMetaData(TEXT("ClampMax"))));
     }
 }
 
@@ -56,16 +54,14 @@ bool URapidIntPropertyWidget::InitializePropertyWidget(UObject* InObject, FPrope
         return false;
     }
     
-    // 设置属性名称文本 - PropertyNameText由BindWidget保证不为空
+    // 设置属性名称文本
     PropertyNameText->SetText(PropertyDisplayName);
     
-    // 绑定SpinBox事件 - ValueSpinBox由BindWidget保证不为空
+    // 绑定SpinBox事件
     ValueSpinBox->OnValueChanged.AddDynamic(this, &URapidIntPropertyWidget::HandleValueChanged);
     
     // 设置SpinBox属性
-    SafeExecute([&]() {
-        SetupSpinBoxFromProperty();
-    }, TEXT("初始化SpinBox属性失败"));
+    SetupSpinBoxFromProperty();
     
     // 更新初始值
     UpdateValue();
@@ -75,19 +71,12 @@ bool URapidIntPropertyWidget::InitializePropertyWidget(UObject* InObject, FPrope
 void URapidIntPropertyWidget::UpdateValue_Implementation()
 {
     SafeExecute([&]() {
-        // 初始化当前值
-        CurrentValue = 0;
-        
+        // 获取属性值
         FIntProperty* IntProperty = CastField<FIntProperty>(Property);
         if (IntProperty && TargetObject)
         {
-            // 安全地获取属性值
             CurrentValue = IntProperty->GetPropertyValue_InContainer(TargetObject);
-            
-            // 更新UI - ValueSpinBox由BindWidget保证不为空
             ValueSpinBox->SetValue(CurrentValue);
-            
-            // 确保属性名称文本正确显示 - PropertyNameText由BindWidget保证不为空
             PropertyNameText->SetText(PropertyDisplayName);
         }
     }, TEXT("更新Int属性值失败"));
@@ -119,13 +108,13 @@ bool URapidIntPropertyWidget::SetValue(int32 InValue)
         IntProperty->SetPropertyValue_InContainer(TargetObject, InValue);
         CurrentValue = InValue;
         
-        // 只更新当值不同时 - ValueSpinBox由BindWidget保证不为空
+        // 只更新当值不同时
         if (FMath::RoundToInt(ValueSpinBox->GetValue()) != InValue)
         {
             ValueSpinBox->SetValue(InValue);
         }
         
-        // 确保属性名称文本正确显示 - PropertyNameText由BindWidget保证不为空
+        // 确保属性名称文本正确显示
         PropertyNameText->SetText(PropertyDisplayName);
         
         // 通知属性值已更改
@@ -136,17 +125,13 @@ bool URapidIntPropertyWidget::SetValue(int32 InValue)
 
 int32 URapidIntPropertyWidget::GetValue() const
 {
-    // 直接返回缓存值，无需重新从属性获取
     return CurrentValue;
 }
 
 void URapidIntPropertyWidget::HandleValueChanged(float NewValue)
 {
     SafeExecute([&, NewValue]() {
-        // 四舍五入为整数
         int32 NewIntValue = FMath::RoundToInt(NewValue);
-        
-        // 只有在值发生变化时才更新
         if (CurrentValue != NewIntValue)
         {
             SetValue(NewIntValue);

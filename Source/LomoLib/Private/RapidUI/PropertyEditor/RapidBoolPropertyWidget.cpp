@@ -28,10 +28,10 @@ bool URapidBoolPropertyWidget::InitializePropertyWidget(UObject* InObject, FProp
         return false;
     }
     
-    // 设置属性名称文本 - PropertyNameText由BindWidget保证不为空
+    // 设置属性名称文本
     PropertyNameText->SetText(PropertyDisplayName);
     
-    // 绑定复选框事件 - ValueCheckBox由BindWidget保证不为空
+    // 绑定复选框事件
     ValueCheckBox->OnCheckStateChanged.AddDynamic(this, &URapidBoolPropertyWidget::HandleCheckStateChanged);
     
     // 更新初始值
@@ -42,19 +42,12 @@ bool URapidBoolPropertyWidget::InitializePropertyWidget(UObject* InObject, FProp
 void URapidBoolPropertyWidget::UpdateValue_Implementation()
 {
     SafeExecute([&]() {
-        // 初始化当前值
-        bCurrentValue = false;
-        
+        // 获取属性值
         FBoolProperty* BoolProperty = CastField<FBoolProperty>(Property);
         if (BoolProperty && TargetObject)
         {
-            // 安全地获取属性值
             bCurrentValue = BoolProperty->GetPropertyValue_InContainer(TargetObject);
-            
-            // 更新UI - ValueCheckBox由BindWidget保证不为空
             ValueCheckBox->SetIsChecked(bCurrentValue);
-            
-            // 确保属性名称文本正确显示 - PropertyNameText由BindWidget保证不为空
             PropertyNameText->SetText(PropertyDisplayName);
         }
     }, TEXT("更新Bool属性值失败"));
@@ -86,13 +79,13 @@ bool URapidBoolPropertyWidget::SetValue(bool InValue)
         BoolProperty->SetPropertyValue_InContainer(TargetObject, InValue);
         bCurrentValue = InValue;
         
-        // 只更新当值不同时 - ValueCheckBox由BindWidget保证不为空
+        // 只更新当值不同时
         if (ValueCheckBox->IsChecked() != InValue)
         {
             ValueCheckBox->SetIsChecked(InValue);
         }
         
-        // 确保属性名称文本正确显示 - PropertyNameText由BindWidget保证不为空
+        // 确保属性名称文本正确显示
         PropertyNameText->SetText(PropertyDisplayName);
         
         // 通知属性值已更改
@@ -103,14 +96,12 @@ bool URapidBoolPropertyWidget::SetValue(bool InValue)
 
 bool URapidBoolPropertyWidget::GetValue() const
 {
-    // 直接返回缓存值，无需重新从属性获取
     return bCurrentValue;
 }
 
 void URapidBoolPropertyWidget::HandleCheckStateChanged(bool bIsChecked)
 {
     SafeExecute([&, bIsChecked]() {
-        // 只有在值发生变化时才更新
         if (bCurrentValue != bIsChecked)
         {
             SetValue(bIsChecked);

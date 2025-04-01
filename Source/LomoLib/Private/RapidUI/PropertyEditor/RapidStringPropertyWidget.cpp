@@ -28,10 +28,6 @@ bool URapidStringPropertyWidget::InitializePropertyWidget(UObject* InObject, FPr
         return false;
     }
 
-    // 输出调试信息
-    UE_LOG(LogTemp, Display, TEXT("正在初始化StringPropertyWidget - 对象: %s, 属性: %s"), 
-           *InObject->GetName(), *InProperty->GetName());
-
     // 确定属性类型
     if (InProperty->IsA<FStrProperty>())
     {
@@ -55,16 +51,14 @@ bool URapidStringPropertyWidget::InitializePropertyWidget(UObject* InObject, FPr
         return false;
     }
 
-    // 设置属性名称文本 - PropertyNameText由BindWidget保证不为空
+    // 设置属性名称文本
     PropertyNameText->SetText(PropertyDisplayName);
-    UE_LOG(LogTemp, Display, TEXT("设置属性名称文本: %s"), *PropertyDisplayName.ToString());
-
-    // 绑定文本框事件 - ValueTextBox由BindWidget保证不为空
+    
+    // 绑定文本框事件
     ValueTextBox->OnTextCommitted.AddDynamic(this, &URapidStringPropertyWidget::HandleTextCommitted);
     ValueTextBox->OnTextChanged.AddDynamic(this, &URapidStringPropertyWidget::HandleTextChanged);
-    UE_LOG(LogTemp, Display, TEXT("文本框事件绑定成功"));
 
-    // 从目标对象读取初始值
+    // 更新初始值
     UpdateValue();
     return true;
 }
@@ -83,7 +77,7 @@ void URapidStringPropertyWidget::UpdateValue_Implementation()
             if (StrProperty && TargetObject)
             {
                 CurrentValue = StrProperty->GetPropertyValue_InContainer(TargetObject);
-                UE_LOG(LogTemp, Display, TEXT("获取FString属性值: %s"), *CurrentValue);
+                UE_LOG(LogTemp, Verbose, TEXT("获取FString属性值: %s"), *CurrentValue);
             }
         }
         else if (PropertyType == EPropertyType::Name)
@@ -93,7 +87,7 @@ void URapidStringPropertyWidget::UpdateValue_Implementation()
             {
                 FName NameValue = NameProperty->GetPropertyValue_InContainer(TargetObject);
                 CurrentValue = NameValue.ToString();
-                UE_LOG(LogTemp, Display, TEXT("获取FName属性值: %s"), *CurrentValue);
+                UE_LOG(LogTemp, Verbose, TEXT("获取FName属性值: %s"), *CurrentValue);
             }
         }
         else if (PropertyType == EPropertyType::Text)
@@ -103,7 +97,7 @@ void URapidStringPropertyWidget::UpdateValue_Implementation()
             {
                 FText TextValue = TextProperty->GetPropertyValue_InContainer(TargetObject);
                 CurrentValue = TextValue.ToString();
-                UE_LOG(LogTemp, Display, TEXT("获取FText属性值: %s"), *CurrentValue);
+                UE_LOG(LogTemp, Verbose, TEXT("获取FText属性值: %s"), *CurrentValue);
             }
         }
         else
@@ -112,13 +106,9 @@ void URapidStringPropertyWidget::UpdateValue_Implementation()
             return;
         }
 
-        // 更新界面 - ValueTextBox由BindWidget保证不为空
+        // 更新界面
         ValueTextBox->SetText(FText::FromString(CurrentValue));
-        UE_LOG(LogTemp, Display, TEXT("界面文本框已更新为: %s"), *CurrentValue);
-        
-        // 确保属性名称文本正确显示 - PropertyNameText由BindWidget保证不为空
         PropertyNameText->SetText(PropertyDisplayName);
-        UE_LOG(LogTemp, Display, TEXT("属性名称文本已更新为: %s"), *PropertyDisplayName.ToString());
     },
     TEXT("更新String属性值失败"));
 }
@@ -133,12 +123,9 @@ bool URapidStringPropertyWidget::SetValue(const FString& InValue)
             return false;
         }
 
-        UE_LOG(LogTemp, Display, TEXT("尝试设置String属性值: %s"), *InValue);
-
         // 如果值没有变化，直接返回
         if (CurrentValue.Equals(InValue))
         {
-            UE_LOG(LogTemp, Display, TEXT("值未变化，跳过设置"));
             return false;
         }
 
@@ -152,7 +139,6 @@ bool URapidStringPropertyWidget::SetValue(const FString& InValue)
             {
                 StrProperty->SetPropertyValue_InContainer(TargetObject, InValue);
                 bValueSet = true;
-                UE_LOG(LogTemp, Display, TEXT("FString属性值已设置"));
             }
         }
         else if (PropertyType == EPropertyType::Name)
@@ -162,7 +148,6 @@ bool URapidStringPropertyWidget::SetValue(const FString& InValue)
             {
                 NameProperty->SetPropertyValue_InContainer(TargetObject, FName(*InValue));
                 bValueSet = true;
-                UE_LOG(LogTemp, Display, TEXT("FName属性值已设置"));
             }
         }
         else if (PropertyType == EPropertyType::Text)
@@ -172,7 +157,6 @@ bool URapidStringPropertyWidget::SetValue(const FString& InValue)
             {
                 TextProperty->SetPropertyValue_InContainer(TargetObject, FText::FromString(InValue));
                 bValueSet = true;
-                UE_LOG(LogTemp, Display, TEXT("FText属性值已设置"));
             }
         }
 
@@ -181,16 +165,12 @@ bool URapidStringPropertyWidget::SetValue(const FString& InValue)
             // 更新缓存的当前值
             CurrentValue = InValue;
             
-            // 更新UI - ValueTextBox由BindWidget保证不为空
+            // 更新UI
             ValueTextBox->SetText(FText::FromString(CurrentValue));
-
-            // 确保属性名称文本正确显示 - PropertyNameText由BindWidget保证不为空
             PropertyNameText->SetText(PropertyDisplayName);
-            UE_LOG(LogTemp, Display, TEXT("属性名称文本已更新为: %s"), *PropertyDisplayName.ToString());
 
             // 通知值变化
             NotifyPropertyValueChanged();
-            UE_LOG(LogTemp, Display, TEXT("属性值已变更并通知: %s"), *CurrentValue);
             return true;
         }
 
@@ -202,7 +182,6 @@ bool URapidStringPropertyWidget::SetValue(const FString& InValue)
 
 FString URapidStringPropertyWidget::GetValue() const
 {
-    // 直接返回缓存的值，避免每次都从属性获取
     return CurrentValue;
 }
 
@@ -213,9 +192,7 @@ void URapidStringPropertyWidget::HandleTextCommitted(const FText& Text, ETextCom
         // 只在按下回车键或失去焦点时更新值
         if (CommitMethod == ETextCommit::OnEnter || CommitMethod == ETextCommit::OnUserMovedFocus)
         {
-            FString NewValue = Text.ToString();
-            UE_LOG(LogTemp, Display, TEXT("文本已提交，新值: %s, 提交方式: %d"), *NewValue, (int32)CommitMethod);
-            SetValue(NewValue);
+            SetValue(Text.ToString());
         }
     },
     TEXT("处理文本提交失败"));
@@ -224,5 +201,5 @@ void URapidStringPropertyWidget::HandleTextCommitted(const FText& Text, ETextCom
 void URapidStringPropertyWidget::HandleTextChanged(const FText& Text)
 {
     // 这里可以添加实时验证或格式化，但暂时不会立即更新值
-    UE_LOG(LogTemp, Display, TEXT("文本正在变更: %s"), *Text.ToString());
+    UE_LOG(LogTemp, Verbose, TEXT("文本正在变更: %s"), *Text.ToString());
 }
