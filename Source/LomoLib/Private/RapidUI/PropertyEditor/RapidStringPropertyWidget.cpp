@@ -49,47 +49,49 @@ void URapidStringPropertyWidget::InitializePropertyWidget(UObject* InObject, FPr
 
 void URapidStringPropertyWidget::UpdateValue_Implementation()
 {
-    if (!Property || !ValuePtr)
+    if (!Property || !ValuePtr || !TargetObject)
     {
         return;
     }
     
-    FText DisplayText;
+    // 初始化为空值
+    CurrentValue = TEXT("");
+    FText DisplayText = FText::GetEmpty();
     
-    // 根据属性类型获取值
-    if (PropertyType == EPropertyType::String)
+    // 根据属性类型使用基础方法获取值
+    if (Property && Property->IsValidLowLevel())
     {
-        FStrProperty* StrProperty = CastField<FStrProperty>(Property);
-        if (StrProperty)
-        {
-            FString StrPtr = StrProperty->GetPropertyValue(ValuePtr);
-            CurrentValue = TEXT("");
-            DisplayText = FText::FromString(CurrentValue);
-        }
-    }
-    else if (PropertyType == EPropertyType::Name)
-    {
-        FNameProperty* NameProperty = CastField<FNameProperty>(Property);
-        if (NameProperty)
-        {
-            FName NameValue = NameProperty->GetPropertyValue(ValuePtr);
-            CurrentValue = NameValue.ToString();
-            DisplayText = FText::FromName(NameValue);
-        }
-    }
-    else if (PropertyType == EPropertyType::Text)
-    {
-        FTextProperty* TextProperty = CastField<FTextProperty>(Property);
-        if (TextProperty)
-        {
-            FText TextValue = TextProperty->GetPropertyValue(ValuePtr);
-            CurrentValue = TextValue.ToString();
-            DisplayText = TextValue;
-        }
+        // if (const FStrProperty* StrProperty = CastField<FStrProperty>(Property))
+        // {
+        //     const FString* Value = StrProperty->GetPropertyValuePtr(ValuePtr);
+        //     if (Value)
+        //     {
+        //         CurrentValue = *Value;
+        //         DisplayText = FText::FromString(CurrentValue);
+        //     }
+        // }
+        // else if (const FNameProperty* NameProperty = CastField<FNameProperty>(Property))
+        // {
+        //     const FName* Value = NameProperty->GetPropertyValuePtr(ValuePtr);
+        //     if (Value)
+        //     {
+        //         CurrentValue = Value->ToString();
+        //         DisplayText = FText::FromName(*Value);
+        //     }
+        // }
+        // else if (const FTextProperty* TextProperty = CastField<FTextProperty>(Property))
+        // {
+        //     const FText* Value = TextProperty->GetPropertyValuePtr(ValuePtr);
+        //     if (Value)
+        //     {
+        //         CurrentValue = Value->ToString();
+        //         DisplayText = *Value;
+        //     }
+        // }
     }
     
     // 更新UI
-    if (ValueTextBox)
+    if (ValueTextBox && ValueTextBox->IsValidLowLevel())
     {
         ValueTextBox->SetText(DisplayText);
     }
@@ -103,36 +105,44 @@ void URapidStringPropertyWidget::SetValue(const FString& InValue)
     }
     
     CurrentValue = InValue;
+    bool bValueChanged = false;
     
-    // 根据属性类型设置值
-    if (PropertyType == EPropertyType::String)
+    // 根据属性类型使用基础方法设置值
+    if (Property && Property->IsValidLowLevel())
     {
-        FStrProperty* StrProperty = CastField<FStrProperty>(Property);
-        if (StrProperty)
+        if (FStrProperty* StrProperty = CastField<FStrProperty>(Property))
         {
-            StrProperty->SetPropertyValue(ValuePtr, InValue);
+            FString* Value = StrProperty->GetPropertyValuePtr(ValuePtr);
+            if (Value)
+            {
+                *Value = InValue;
+                bValueChanged = true;
+            }
         }
-    }
-    else if (PropertyType == EPropertyType::Name)
-    {
-        FNameProperty* NameProperty = CastField<FNameProperty>(Property);
-        if (NameProperty)
+        else if (FNameProperty* NameProperty = CastField<FNameProperty>(Property))
         {
-            FName NameValue = FName(*InValue);
-            NameProperty->SetPropertyValue(ValuePtr, NameValue);
+            FName* Value = NameProperty->GetPropertyValuePtr(ValuePtr);
+            if (Value)
+            {
+                *Value = FName(*InValue);
+                bValueChanged = true;
+            }
         }
-    }
-    else if (PropertyType == EPropertyType::Text)
-    {
-        FTextProperty* TextProperty = CastField<FTextProperty>(Property);
-        if (TextProperty)
+        else if (FTextProperty* TextProperty = CastField<FTextProperty>(Property))
         {
-            FText TextValue = FText::FromString(InValue);
-            TextProperty->SetPropertyValue(ValuePtr, TextValue);
+            FText* Value = TextProperty->GetPropertyValuePtr(ValuePtr);
+            if (Value)
+            {
+                *Value = FText::FromString(InValue);
+                bValueChanged = true;
+            }
         }
     }
     
-    NotifyPropertyValueChanged();
+    if (bValueChanged)
+    {
+        NotifyPropertyValueChanged();
+    }
 }
 
 FString URapidStringPropertyWidget::GetValue() const

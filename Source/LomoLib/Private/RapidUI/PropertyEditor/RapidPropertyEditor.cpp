@@ -3,6 +3,7 @@
 #include "RapidUI/PropertyEditor/RapidPropertyEditor.h"
 #include "Components/ScrollBox.h"
 #include "Components/VerticalBox.h"
+#include "RapidUI/PropertyEditor/LomoLibPropertyEditorTestObject.h"
 #include "UObject/UnrealType.h"
 #include "UObject/PropertyPortFlags.h"
 #include "RapidUI/PropertyEditor/RapidPropertyWidget.h"
@@ -78,57 +79,14 @@ TObjectPtr<URapidPropertyWidget> URapidPropertyEditor::CreatePropertyWidgetForTy
         return nullptr;
     }
 
-    // 定义属性类型检查辅助函数
-    auto IsStringProperty = [](const FProperty* Prop) -> bool {
-        return Prop->IsA<FStrProperty>() || Prop->IsA<FNameProperty>() || Prop->IsA<FTextProperty>();
-    };
-
-    auto IsEnumProperty = [](const FProperty* Prop) -> bool {
-        if (Prop->IsA<FEnumProperty>())
-            return true;
-        if (const FByteProperty* ByteProp = CastField<FByteProperty>(Prop))
-            return ByteProp->IsEnum();
-        return false;
-    };
-
-    TSubclassOf<URapidPropertyWidget> WidgetClass = nullptr;
-
-    if (InProperty->IsA<FFloatProperty>())
+    // 只处理int类型的属性
+    if (InProperty->IsA<FIntProperty>())
     {
-        WidgetClass = FloatPropertyWidgetClass;
-    }
-    else if (InProperty->IsA<FIntProperty>())
-    {
-        WidgetClass = IntPropertyWidgetClass;
-    }
-    else if (InProperty->IsA<FBoolProperty>())
-    {
-        WidgetClass = BoolPropertyWidgetClass;
-    }
-    else if (IsStringProperty(InProperty))
-    {
-        WidgetClass = StringPropertyWidgetClass;
-    }
-    else if (IsEnumProperty(InProperty))
-    {
-        WidgetClass = StringPropertyWidgetClass;
-    }
-    else if (InProperty->IsA<FStructProperty>())
-    {
-        WidgetClass = StructPropertyWidgetClass;
-    }
-    else if (InProperty->IsA<FArrayProperty>())
-    {
-        WidgetClass = ArrayPropertyWidgetClass;
-    }
-    else if (InProperty->IsA<FMapProperty>())
-    {
-        WidgetClass = MapPropertyWidgetClass;
+        return CreateWidget<URapidPropertyWidget>(InOuter, IntPropertyWidgetClass);
     }
 
-    check(WidgetClass);
-
-    return CreateWidget<URapidPropertyWidget>(InOuter, WidgetClass);
+    // 其他类型返回nullptr
+    return nullptr;
 }
 
 void URapidPropertyEditor::RenderProperties()
@@ -171,17 +129,21 @@ void URapidPropertyEditor::RenderProperties()
         // 创建属性控件
         auto PropertyWidget = CreatePropertyWidgetForType(this, Property);
         
-        // 初始化属性控件
-        PropertyWidget->InitializePropertyWidget(TargetObject, Property, PropertyValuePtr);
-            
-        // 绑定属性值变化事件
-        PropertyWidget->OnPropertyValueChanged.AddDynamic(this, &URapidPropertyEditor::HandlePropertyValueChanged);
-            
-        // 添加到主容器
-        MainVerticalBox->AddChild(PropertyWidget);
-            
-        // 添加到控件列表
-        PropertyWidgets.Add(PropertyWidget);
+        // 只有成功创建了属性控件才继续处理
+        if (PropertyWidget)
+        {
+            // 初始化属性控件
+            PropertyWidget->InitializePropertyWidget(TargetObject, Property, PropertyValuePtr);
+                
+            // 绑定属性值变化事件
+            PropertyWidget->OnPropertyValueChanged.AddDynamic(this, &URapidPropertyEditor::HandlePropertyValueChanged);
+                
+            // 添加到主容器
+            MainVerticalBox->AddChild(PropertyWidget);
+                
+            // 添加到控件列表
+            PropertyWidgets.Add(PropertyWidget);
+        }
     }
 }
 
@@ -190,7 +152,22 @@ void URapidPropertyEditor::HandlePropertyValueChanged(UObject* Object, FName Pro
     // 触发属性改变事件
     if (Object == TargetObject)
     {
+        if (auto TestObj = Cast<ULomoLibPropertyEditorTestObject>(TargetObject))
+        {
+            TestObj->PrintAllProperties();
+        }
+
+        
         FProperty* Property = TargetObject->GetClass()->FindPropertyByName(PropertyName);
+
+        // 打印当前数值
+        if (Property)
+        {
+            FString PropertyValue;
+            Property->ExportText_Direct(PropertyValue, Property->ContainerPtrToValuePtr<void>(TargetObject), nullptr, TargetObject, 0);
+            UE_LOG(LogTemp, Log, TEXT("Property %s changed to: %s"), *PropertyName.ToString(), *PropertyValue);
+        }
+
         if (Property)
         {
             NotifyPropertyChanged(PropertyName, Property);
