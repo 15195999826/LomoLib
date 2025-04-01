@@ -19,14 +19,14 @@ class LOMOLIB_API URapidBoolPropertyWidget : public URapidPropertyWidget
 
 public:
     // 重写初始化方法
-    virtual void InitializePropertyWidget(UObject* InObject, FProperty* InProperty, void* InValuePtr) override;
+    virtual bool InitializePropertyWidget(UObject* InObject, FProperty* InProperty, const FName& InPropertyName) override;
     
     // 重写更新值方法
     virtual void UpdateValue_Implementation() override;
     
     // 设置布尔值
     UFUNCTION(BlueprintCallable, Category = "Property Widget")
-    void SetValue(bool InValue);
+    bool SetValue(bool InValue);
     
     // 获取布尔值
     UFUNCTION(BlueprintCallable, Category = "Property Widget")

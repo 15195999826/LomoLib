@@ -79,10 +79,22 @@ TObjectPtr<URapidPropertyWidget> URapidPropertyEditor::CreatePropertyWidgetForTy
         return nullptr;
     }
 
-    // 只处理int类型的属性
+    // 支持int、float、bool和string三种类型的属性
     if (InProperty->IsA<FIntProperty>())
     {
         return CreateWidget<URapidPropertyWidget>(InOuter, IntPropertyWidgetClass);
+    }
+    else if (InProperty->IsA<FFloatProperty>())
+    {
+        return CreateWidget<URapidPropertyWidget>(InOuter, FloatPropertyWidgetClass);
+    }
+    else if (InProperty->IsA<FBoolProperty>())
+    {
+        return CreateWidget<URapidPropertyWidget>(InOuter, BoolPropertyWidgetClass);
+    }
+    else if (InProperty->IsA<FStrProperty>() || InProperty->IsA<FNameProperty>() || InProperty->IsA<FTextProperty>())
+    {
+        return CreateWidget<URapidPropertyWidget>(InOuter, StringPropertyWidgetClass);
     }
 
     // 其他类型返回nullptr
@@ -133,16 +145,17 @@ void URapidPropertyEditor::RenderProperties()
         if (PropertyWidget)
         {
             // 初始化属性控件
-            PropertyWidget->InitializePropertyWidget(TargetObject, Property, PropertyValuePtr);
-                
-            // 绑定属性值变化事件
-            PropertyWidget->OnPropertyValueChanged.AddDynamic(this, &URapidPropertyEditor::HandlePropertyValueChanged);
-                
-            // 添加到主容器
-            MainVerticalBox->AddChild(PropertyWidget);
-                
-            // 添加到控件列表
-            PropertyWidgets.Add(PropertyWidget);
+            if (PropertyWidget->InitializePropertyWidget(TargetObject, Property, Property->GetFName()))
+            {
+                // 绑定属性值变化事件
+                PropertyWidget->OnPropertyValueChanged.AddDynamic(this, &URapidPropertyEditor::HandlePropertyValueChanged);
+                    
+                // 添加到主容器
+                MainVerticalBox->AddChild(PropertyWidget);
+                    
+                // 添加到控件列表
+                PropertyWidgets.Add(PropertyWidget);
+            }
         }
     }
 }

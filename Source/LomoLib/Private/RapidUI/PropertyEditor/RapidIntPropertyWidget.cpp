@@ -11,152 +11,138 @@ URapidIntPropertyWidget::URapidIntPropertyWidget(const FObjectInitializer& Objec
 {
 }
 
-void URapidIntPropertyWidget::InitializePropertyWidget(UObject* InObject, FProperty* InProperty, void* InValuePtr)
+// 添加辅助方法用于设置SpinBox属性
+void URapidIntPropertyWidget::SetupSpinBoxFromProperty()
 {
-    // 调用基类初始化方法
-    Super::InitializePropertyWidget(InObject, InProperty, InValuePtr);
+    // 设置SpinBox的默认属性
+    ValueSpinBox->SetMinValue(TNumericLimits<int32>::Lowest());
+    ValueSpinBox->SetMaxValue(TNumericLimits<int32>::Max());
+    ValueSpinBox->SetDelta(1.0f);
     
-    // 检查必要的参数
-    if (!InObject || !InProperty || !InValuePtr)
+    // 从元数据中读取最小最大值
+    if (Property->HasMetaData(TEXT("ClampMin")))
     {
-        UE_LOG(LogTemp, Warning, TEXT("Invalid parameters in IntPropertyWidget::InitializePropertyWidget"));
-        return;
+        int32 MinValue = FCString::Atoi(*Property->GetMetaData(TEXT("ClampMin")));
+        ValueSpinBox->SetMinValue(MinValue);
     }
     
-    // 绑定SpinBox事件
-    if (ValueSpinBox && ValueSpinBox->IsValidLowLevel())
+    if (Property->HasMetaData(TEXT("ClampMax")))
     {
-        ValueSpinBox->OnValueChanged.AddDynamic(this, &URapidIntPropertyWidget::HandleValueChanged);
-        
-        try
-        {
-            // 设置SpinBox的默认属性
-            ValueSpinBox->SetMinValue(TNumericLimits<int32>::Lowest());
-            ValueSpinBox->SetMaxValue(TNumericLimits<int32>::Max());
-            ValueSpinBox->SetDelta(1.0f);
-            
-            // 从元数据中读取最小最大值
-            if (Property && Property->HasMetaData(TEXT("ClampMin")))
-            {
-                int32 MinValue = FCString::Atoi(*Property->GetMetaData(TEXT("ClampMin")));
-                ValueSpinBox->SetMinValue(MinValue);
-            }
-            
-            if (Property && Property->HasMetaData(TEXT("ClampMax")))
-            {
-                int32 MaxValue = FCString::Atoi(*Property->GetMetaData(TEXT("ClampMax")));
-                ValueSpinBox->SetMaxValue(MaxValue);
-            }
-        }
-        catch (...)
-        {
-            UE_LOG(LogTemp, Warning, TEXT("Exception setting SpinBox properties"));
-        }
+        int32 MaxValue = FCString::Atoi(*Property->GetMetaData(TEXT("ClampMax")));
+        ValueSpinBox->SetMaxValue(MaxValue);
+    }
+}
+
+bool URapidIntPropertyWidget::InitializePropertyWidget(UObject* InObject, FProperty* InProperty, const FName& InPropertyName)
+{
+    // 调用父类的初始化方法
+    if (!Super::InitializePropertyWidget(InObject, InProperty, InPropertyName))
+    {
+        UE_LOG(LogTemp, Warning, TEXT("RapidIntPropertyWidget初始化失败: 父类初始化返回false"));
+        return false;
+    }
+
+    // 参数校验
+    if (!InObject || !InProperty)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("RapidIntPropertyWidget初始化失败: 对象或属性为空"));
+        return false;
     }
     
-    // 设置属性名称
-    if (PropertyNameText && PropertyNameText->IsValidLowLevel())
+    // 确保属性类型正确
+    if (!InProperty->IsA<FIntProperty>())
     {
-        PropertyNameText->SetText(PropertyDisplayName);
+        UE_LOG(LogTemp, Warning, TEXT("RapidIntPropertyWidget初始化失败: 属性类型不是Int"));
+        return false;
     }
+    
+    // 设置属性名称文本 - PropertyNameText由BindWidget保证不为空
+    PropertyNameText->SetText(PropertyDisplayName);
+    
+    // 绑定SpinBox事件 - ValueSpinBox由BindWidget保证不为空
+    ValueSpinBox->OnValueChanged.AddDynamic(this, &URapidIntPropertyWidget::HandleValueChanged);
+    
+    // 设置SpinBox属性
+    SafeExecute([&]() {
+        SetupSpinBoxFromProperty();
+    }, TEXT("初始化SpinBox属性失败"));
     
     // 更新初始值
     UpdateValue();
+    return true;
 }
 
 void URapidIntPropertyWidget::UpdateValue_Implementation()
 {
-    if (!Property || !ValuePtr || !TargetObject)
-    {
-        return;
-    }
-    
-    // 确保属性有效
-    if (!Property->IsValidLowLevel())
-    {
-        return;
-    }
-    
-    FIntProperty* IntProperty = CastField<FIntProperty>(Property);
-    if (!IntProperty)
-    {
-        return;
-    }
-    
-    try
-    {
-        // 安全地获取属性值
-        CurrentValue = IntProperty->GetPropertyValue(ValuePtr);
+    SafeExecute([&]() {
+        // 初始化当前值
+        CurrentValue = 0;
         
-        // 更新UI
-        if (ValueSpinBox && ValueSpinBox->IsValidLowLevel())
+        FIntProperty* IntProperty = CastField<FIntProperty>(Property);
+        if (IntProperty && TargetObject)
         {
+            // 安全地获取属性值
+            CurrentValue = IntProperty->GetPropertyValue_InContainer(TargetObject);
+            
+            // 更新UI - ValueSpinBox由BindWidget保证不为空
             ValueSpinBox->SetValue(CurrentValue);
+            
+            // 确保属性名称文本正确显示 - PropertyNameText由BindWidget保证不为空
+            PropertyNameText->SetText(PropertyDisplayName);
         }
-    }
-    catch (...)
-    {
-        // 捕获可能的异常
-        UE_LOG(LogTemp, Warning, TEXT("UpdateValue exception in RapidIntPropertyWidget for property: %s"), *PropertyName.ToString());
-    }
+    }, TEXT("更新Int属性值失败"));
 }
 
-void URapidIntPropertyWidget::SetValue(int32 InValue)
+bool URapidIntPropertyWidget::SetValue(int32 InValue)
 {
-    if (!Property || !ValuePtr || !TargetObject)
-    {
-        return;
-    }
-    
-    // 确保属性有效
-    if (!Property->IsValidLowLevel())
-    {
-        return;
-    }
-    
-    FIntProperty* IntProperty = CastField<FIntProperty>(Property);
-    if (!IntProperty)
-    {
-        return;
-    }
-    
-    try
-    {
+    return SafeExecuteWithRet([&]() -> bool {
+        if (!TargetObject || !Property)
+        {
+            UE_LOG(LogTemp, Error, TEXT("设置Int属性值失败: 对象或属性为空"));
+            return false;
+        }
+        
+        FIntProperty* IntProperty = CastField<FIntProperty>(Property);
+        if (!IntProperty)
+        {
+            UE_LOG(LogTemp, Error, TEXT("设置Int属性值失败: 属性类型不是Int"));
+            return false;
+        }
+        
+        // 如果值没有变化，直接返回
+        if (CurrentValue == InValue)
+        {
+            return false;
+        }
+        
         // 安全地设置属性值
-        IntProperty->SetPropertyValue(ValuePtr, InValue);
+        IntProperty->SetPropertyValue_InContainer(TargetObject, InValue);
         CurrentValue = InValue;
         
-        // 只有当新值与当前UI值不同时才更新UI
-        if (ValueSpinBox && ValueSpinBox->IsValidLowLevel() && 
-            FMath::RoundToInt(ValueSpinBox->GetValue()) != InValue)
+        // 只更新当值不同时 - ValueSpinBox由BindWidget保证不为空
+        if (FMath::RoundToInt(ValueSpinBox->GetValue()) != InValue)
         {
             ValueSpinBox->SetValue(InValue);
         }
         
+        // 确保属性名称文本正确显示 - PropertyNameText由BindWidget保证不为空
+        PropertyNameText->SetText(PropertyDisplayName);
+        
         // 通知属性值已更改
         NotifyPropertyValueChanged();
-    }
-    catch (...)
-    {
-        // 捕获可能的异常
-        UE_LOG(LogTemp, Warning, TEXT("SetValue exception in RapidIntPropertyWidget for property: %s"), *PropertyName.ToString());
-    }
+        return true;
+    }, TEXT("设置Int属性值失败"));
 }
 
 int32 URapidIntPropertyWidget::GetValue() const
 {
+    // 直接返回缓存值，无需重新从属性获取
     return CurrentValue;
 }
 
 void URapidIntPropertyWidget::HandleValueChanged(float NewValue)
 {
-    if (!Property || !ValuePtr || !TargetObject)
-    {
-        return;
-    }
-    
-    try
-    {
+    SafeExecute([&, NewValue]() {
         // 四舍五入为整数
         int32 NewIntValue = FMath::RoundToInt(NewValue);
         
@@ -165,10 +151,5 @@ void URapidIntPropertyWidget::HandleValueChanged(float NewValue)
         {
             SetValue(NewIntValue);
         }
-    }
-    catch (...)
-    {
-        // 捕获可能的异常
-        UE_LOG(LogTemp, Warning, TEXT("HandleValueChanged exception in RapidIntPropertyWidget for property: %s"), *PropertyName.ToString());
-    }
+    }, TEXT("处理数值变化失败"));
 }

@@ -4,72 +4,116 @@
 #include "Components/CheckBox.h"
 #include "Components/TextBlock.h"
 #include "UObject/UnrealType.h"
-void URapidBoolPropertyWidget::InitializePropertyWidget(UObject* InObject, FProperty* InProperty, void* InValuePtr)
+
+bool URapidBoolPropertyWidget::InitializePropertyWidget(UObject* InObject, FProperty* InProperty, const FName& InPropertyName)
 {
-    Super::InitializePropertyWidget(InObject, InProperty, InValuePtr);
-    
-    // 绑定复选框事件
-    if (ValueCheckBox)
+    // 调用父类的初始化方法
+    if (!Super::InitializePropertyWidget(InObject, InProperty, InPropertyName))
     {
-        ValueCheckBox->OnCheckStateChanged.AddDynamic(this, &URapidBoolPropertyWidget::HandleCheckStateChanged);
+        UE_LOG(LogTemp, Warning, TEXT("RapidBoolPropertyWidget初始化失败: 父类初始化返回false"));
+        return false;
+    }
+
+    // 参数校验
+    if (!InObject || !InProperty)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("RapidBoolPropertyWidget初始化失败: 对象或属性为空"));
+        return false;
     }
     
-    // 设置属性名称
-    if (PropertyNameText)
+    // 确保属性类型正确
+    if (!InProperty->IsA<FBoolProperty>())
     {
-        PropertyNameText->SetText(PropertyDisplayName);
+        UE_LOG(LogTemp, Warning, TEXT("RapidBoolPropertyWidget初始化失败: 属性类型不是Bool"));
+        return false;
     }
+    
+    // 设置属性名称文本 - PropertyNameText由BindWidget保证不为空
+    PropertyNameText->SetText(PropertyDisplayName);
+    
+    // 绑定复选框事件 - ValueCheckBox由BindWidget保证不为空
+    ValueCheckBox->OnCheckStateChanged.AddDynamic(this, &URapidBoolPropertyWidget::HandleCheckStateChanged);
     
     // 更新初始值
     UpdateValue();
+    return true;
 }
 
 void URapidBoolPropertyWidget::UpdateValue_Implementation()
 {
-    if (Property && ValuePtr)
-    {
+    SafeExecute([&]() {
+        // 初始化当前值
+        bCurrentValue = false;
+        
         FBoolProperty* BoolProperty = CastField<FBoolProperty>(Property);
-        if (BoolProperty)
+        if (BoolProperty && TargetObject)
         {
-            bCurrentValue = BoolProperty->GetPropertyValue(ValuePtr);
+            // 安全地获取属性值
+            bCurrentValue = BoolProperty->GetPropertyValue_InContainer(TargetObject);
             
-            if (ValueCheckBox)
-            {
-                ValueCheckBox->SetIsChecked(bCurrentValue);
-            }
+            // 更新UI - ValueCheckBox由BindWidget保证不为空
+            ValueCheckBox->SetIsChecked(bCurrentValue);
+            
+            // 确保属性名称文本正确显示 - PropertyNameText由BindWidget保证不为空
+            PropertyNameText->SetText(PropertyDisplayName);
         }
-    }
+    }, TEXT("更新Bool属性值失败"));
 }
 
-void URapidBoolPropertyWidget::SetValue(bool InValue)
+bool URapidBoolPropertyWidget::SetValue(bool InValue)
 {
-    if (Property && ValuePtr && TargetObject)
-    {
-        FBoolProperty* BoolProperty = CastField<FBoolProperty>(Property);
-        if (BoolProperty)
+    return SafeExecuteWithRet([&]() -> bool {
+        if (!TargetObject || !Property)
         {
-            BoolProperty->SetPropertyValue(ValuePtr, InValue);
-            bCurrentValue = InValue;
-            
-            if (ValueCheckBox && ValueCheckBox->IsChecked() != InValue)
-            {
-                ValueCheckBox->SetIsChecked(InValue);
-            }
-            
-            NotifyPropertyValueChanged();
+            UE_LOG(LogTemp, Error, TEXT("设置Bool属性值失败: 对象或属性为空"));
+            return false;
         }
-    }
+        
+        FBoolProperty* BoolProperty = CastField<FBoolProperty>(Property);
+        if (!BoolProperty)
+        {
+            UE_LOG(LogTemp, Error, TEXT("设置Bool属性值失败: 属性类型不是Bool"));
+            return false;
+        }
+        
+        // 如果值没有变化，直接返回
+        if (bCurrentValue == InValue)
+        {
+            return false;
+        }
+        
+        // 安全地设置属性值
+        BoolProperty->SetPropertyValue_InContainer(TargetObject, InValue);
+        bCurrentValue = InValue;
+        
+        // 只更新当值不同时 - ValueCheckBox由BindWidget保证不为空
+        if (ValueCheckBox->IsChecked() != InValue)
+        {
+            ValueCheckBox->SetIsChecked(InValue);
+        }
+        
+        // 确保属性名称文本正确显示 - PropertyNameText由BindWidget保证不为空
+        PropertyNameText->SetText(PropertyDisplayName);
+        
+        // 通知属性值已更改
+        NotifyPropertyValueChanged();
+        return true;
+    }, TEXT("设置Bool属性值失败"));
 }
 
 bool URapidBoolPropertyWidget::GetValue() const
 {
+    // 直接返回缓存值，无需重新从属性获取
     return bCurrentValue;
 }
 
 void URapidBoolPropertyWidget::HandleCheckStateChanged(bool bIsChecked)
 {
-    if (bCurrentValue != bIsChecked)
-    {
-        SetValue(bIsChecked);
-    }
+    SafeExecute([&, bIsChecked]() {
+        // 只有在值发生变化时才更新
+        if (bCurrentValue != bIsChecked)
+        {
+            SetValue(bIsChecked);
+        }
+    }, TEXT("处理复选框状态变化失败"));
 } 

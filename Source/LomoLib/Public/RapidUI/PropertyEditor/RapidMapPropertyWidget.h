@@ -23,7 +23,7 @@ public:
     URapidMapPropertyWidget(const FObjectInitializer& ObjectInitializer);
     
     // 重写初始化方法
-    virtual void InitializePropertyWidget(UObject* InObject, FProperty* InProperty, void* InValuePtr) override;
+    virtual bool InitializePropertyWidget(UObject* InObject, FProperty* InProperty, const FName& InPropertyName) override;
     
     // 重写更新值方法
     virtual void UpdateValue_Implementation() override;

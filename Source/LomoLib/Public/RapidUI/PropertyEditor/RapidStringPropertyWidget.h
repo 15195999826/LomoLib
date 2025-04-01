@@ -21,14 +21,14 @@ public:
     URapidStringPropertyWidget(const FObjectInitializer& ObjectInitializer);
     
     // 重写初始化方法
-    virtual void InitializePropertyWidget(UObject* InObject, FProperty* InProperty, void* InValuePtr) override;
+    virtual bool InitializePropertyWidget(UObject* InObject, FProperty* InProperty, const FName& InPropertyName) override;
     
     // 重写更新值方法
     virtual void UpdateValue_Implementation() override;
     
     // 设置字符串值
     UFUNCTION(BlueprintCallable, Category = "Property Widget")
-    void SetValue(const FString& InValue);
+    bool SetValue(const FString& InValue);
     
     // 获取字符串值
     UFUNCTION(BlueprintCallable, Category = "Property Widget")

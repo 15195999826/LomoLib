@@ -21,14 +21,14 @@ public:
     URapidIntPropertyWidget(const FObjectInitializer& ObjectInitializer);
     
     // 重写初始化方法
-    virtual void InitializePropertyWidget(UObject* InObject, FProperty* InProperty, void* InValuePtr) override;
+    virtual bool InitializePropertyWidget(UObject* InObject, FProperty* InProperty, const FName& InPropertyName) override;
     
     // 重写更新值方法
     virtual void UpdateValue_Implementation() override;
     
     // 设置整数值
     UFUNCTION(BlueprintCallable, Category = "Property Widget")
-    void SetValue(int32 InValue);
+    bool SetValue(int32 InValue);
     
     // 获取整数值
     UFUNCTION(BlueprintCallable, Category = "Property Widget")
@@ -50,4 +50,7 @@ protected:
 private:
     // 当前值
     int32 CurrentValue;
+    
+    // 设置SpinBox属性的辅助方法
+    void SetupSpinBoxFromProperty();
 };
