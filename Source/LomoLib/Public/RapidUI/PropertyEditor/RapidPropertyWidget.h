@@ -34,7 +34,7 @@ public:
     void SetPropertyDisplayName(const FText& InDisplayName);
 
     /** 初始化属性控件 */
-    virtual void InitializePropertyWidget(UObject* InObject, FProperty* InProperty, void* InValuePtr);
+    virtual bool InitializePropertyWidget(UObject* InObject, FProperty* InProperty, const FName& InPropertyName);
 
     /** 更新属性值（当值改变时） */
     UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category = "Property Widget")
@@ -55,9 +55,6 @@ protected:
     /** 属性指针 */
     FProperty* Property;
 
-    /** 值指针 */
-    void* ValuePtr;
-
     /** 属性名称 */
     UPROPERTY(BlueprintReadOnly, Category = "Property Widget")
     FName PropertyName;
@@ -73,4 +70,42 @@ protected:
     /** 通知属性值已经改变 */
     UFUNCTION(BlueprintCallable, Category = "Property Widget")
     void NotifyPropertyValueChanged();
+    
+    /** 安全执行方法的辅助函数，统一处理异常 */
+    template<typename F>
+    void SafeExecute(F&& Operation, const TCHAR* ErrorMessage)
+    {
+        try
+        {
+            Operation();
+        }
+        catch (const std::exception& Ex)
+        {
+            UE_LOG(LogTemp, Error, TEXT("%s - 异常: %s"), ErrorMessage, UTF8_TO_TCHAR(Ex.what()));
+        }
+        catch (...)
+        {
+            UE_LOG(LogTemp, Error, TEXT("%s - 未知异常"), ErrorMessage);
+        }
+    }
+    
+    /** 安全执行方法的辅助函数，带返回值，统一处理异常 */
+    template<typename F, typename RetType = decltype(std::declval<F>()())>
+    RetType SafeExecuteWithRet(F&& Operation, const TCHAR* ErrorMessage)
+    {
+        try
+        {
+            return Operation();
+        }
+        catch (const std::exception& Ex)
+        {
+            UE_LOG(LogTemp, Error, TEXT("%s - 异常: %s"), ErrorMessage, UTF8_TO_TCHAR(Ex.what()));
+            return RetType();
+        }
+        catch (...)
+        {
+            UE_LOG(LogTemp, Error, TEXT("%s - 未知异常"), ErrorMessage);
+            return RetType();
+        }
+    }
 };

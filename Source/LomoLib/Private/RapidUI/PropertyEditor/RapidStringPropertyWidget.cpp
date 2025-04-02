@@ -12,127 +12,172 @@ URapidStringPropertyWidget::URapidStringPropertyWidget(const FObjectInitializer&
 {
 }
 
-void URapidStringPropertyWidget::InitializePropertyWidget(UObject* InObject, FProperty* InProperty, void* InValuePtr)
+bool URapidStringPropertyWidget::InitializePropertyWidget(UObject* InObject, FProperty* InProperty, const FName& InPropertyName)
 {
-    Super::InitializePropertyWidget(InObject, InProperty, InValuePtr);
-    
+    // 调用父类的初始化方法
+    if (!Super::InitializePropertyWidget(InObject, InProperty, InPropertyName))
+    {
+        UE_LOG(LogTemp, Warning, TEXT("RapidStringPropertyWidget初始化失败: 父类初始化返回false"));
+        return false;
+    }
+
+    // 参数校验
+    if (!InObject || !InProperty)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("RapidStringPropertyWidget初始化失败: 对象或属性为空"));
+        return false;
+    }
+
     // 确定属性类型
-    if (Property->IsA<FStrProperty>())
+    if (InProperty->IsA<FStrProperty>())
     {
         PropertyType = EPropertyType::String;
+        UE_LOG(LogTemp, Display, TEXT("属性类型: FString"));
     }
-    else if (Property->IsA<FNameProperty>())
+    else if (InProperty->IsA<FNameProperty>())
     {
         PropertyType = EPropertyType::Name;
+        UE_LOG(LogTemp, Display, TEXT("属性类型: FName"));
     }
-    else if (Property->IsA<FTextProperty>())
+    else if (InProperty->IsA<FTextProperty>())
     {
         PropertyType = EPropertyType::Text;
+        UE_LOG(LogTemp, Display, TEXT("属性类型: FText"));
     }
+    else
+    {
+        UE_LOG(LogTemp, Error, TEXT("RapidStringPropertyWidget初始化失败: 不支持的属性类型 %s"), 
+               *InProperty->GetClass()->GetName());
+        return false;
+    }
+
+    // 设置属性名称文本
+    PropertyNameText->SetText(PropertyDisplayName);
     
     // 绑定文本框事件
-    if (ValueTextBox)
-    {
-        ValueTextBox->OnTextCommitted.AddDynamic(this, &URapidStringPropertyWidget::HandleTextCommitted);
-        ValueTextBox->OnTextChanged.AddDynamic(this, &URapidStringPropertyWidget::HandleTextChanged);
-    }
-    
-    // 设置属性名称
-    if (PropertyNameText)
-    {
-        PropertyNameText->SetText(PropertyDisplayName);
-    }
-    
+    ValueTextBox->OnTextCommitted.AddDynamic(this, &URapidStringPropertyWidget::HandleTextCommitted);
+    ValueTextBox->OnTextChanged.AddDynamic(this, &URapidStringPropertyWidget::HandleTextChanged);
+
     // 更新初始值
     UpdateValue();
+    return true;
 }
 
 void URapidStringPropertyWidget::UpdateValue_Implementation()
 {
-    if (!Property || !ValuePtr)
+    SafeExecute([&]()
     {
-        return;
-    }
-    
-    FText DisplayText;
-    
-    // 根据属性类型获取值
-    if (PropertyType == EPropertyType::String)
-    {
-        FStrProperty* StrProperty = CastField<FStrProperty>(Property);
-        if (StrProperty)
+        // 初始化当前值
+        CurrentValue = FString();
+
+        // 获取属性值
+        if (PropertyType == EPropertyType::String)
         {
-            FString StrPtr = StrProperty->GetPropertyValue(ValuePtr);
-            CurrentValue = TEXT("");
-            DisplayText = FText::FromString(CurrentValue);
+            FStrProperty* StrProperty = CastField<FStrProperty>(Property);
+            if (StrProperty && TargetObject)
+            {
+                CurrentValue = StrProperty->GetPropertyValue_InContainer(TargetObject);
+                UE_LOG(LogTemp, Verbose, TEXT("获取FString属性值: %s"), *CurrentValue);
+            }
         }
-    }
-    else if (PropertyType == EPropertyType::Name)
-    {
-        FNameProperty* NameProperty = CastField<FNameProperty>(Property);
-        if (NameProperty)
+        else if (PropertyType == EPropertyType::Name)
         {
-            FName NameValue = NameProperty->GetPropertyValue(ValuePtr);
-            CurrentValue = NameValue.ToString();
-            DisplayText = FText::FromName(NameValue);
+            FNameProperty* NameProperty = CastField<FNameProperty>(Property);
+            if (NameProperty && TargetObject)
+            {
+                FName NameValue = NameProperty->GetPropertyValue_InContainer(TargetObject);
+                CurrentValue = NameValue.ToString();
+                UE_LOG(LogTemp, Verbose, TEXT("获取FName属性值: %s"), *CurrentValue);
+            }
         }
-    }
-    else if (PropertyType == EPropertyType::Text)
-    {
-        FTextProperty* TextProperty = CastField<FTextProperty>(Property);
-        if (TextProperty)
+        else if (PropertyType == EPropertyType::Text)
         {
-            FText TextValue = TextProperty->GetPropertyValue(ValuePtr);
-            CurrentValue = TextValue.ToString();
-            DisplayText = TextValue;
+            FTextProperty* TextProperty = CastField<FTextProperty>(Property);
+            if (TextProperty && TargetObject)
+            {
+                FText TextValue = TextProperty->GetPropertyValue_InContainer(TargetObject);
+                CurrentValue = TextValue.ToString();
+                UE_LOG(LogTemp, Verbose, TEXT("获取FText属性值: %s"), *CurrentValue);
+            }
         }
-    }
-    
-    // 更新UI
-    if (ValueTextBox)
-    {
-        ValueTextBox->SetText(DisplayText);
-    }
+        else
+        {
+            UE_LOG(LogTemp, Error, TEXT("无法更新值: 未知的属性类型"));
+            return;
+        }
+
+        // 更新界面
+        ValueTextBox->SetText(FText::FromString(CurrentValue));
+        PropertyNameText->SetText(PropertyDisplayName);
+    },
+    TEXT("更新String属性值失败"));
 }
 
-void URapidStringPropertyWidget::SetValue(const FString& InValue)
+bool URapidStringPropertyWidget::SetValue(const FString& InValue)
 {
-    if (!Property || !ValuePtr || !TargetObject)
+    return SafeExecuteWithRet([&]() -> bool
     {
-        return;
-    }
-    
-    CurrentValue = InValue;
-    
-    // 根据属性类型设置值
-    if (PropertyType == EPropertyType::String)
-    {
-        FStrProperty* StrProperty = CastField<FStrProperty>(Property);
-        if (StrProperty)
+        if (!TargetObject || !Property)
         {
-            StrProperty->SetPropertyValue(ValuePtr, InValue);
+            UE_LOG(LogTemp, Error, TEXT("设置String属性值失败: 对象或属性为空"));
+            return false;
         }
-    }
-    else if (PropertyType == EPropertyType::Name)
-    {
-        FNameProperty* NameProperty = CastField<FNameProperty>(Property);
-        if (NameProperty)
+
+        // 如果值没有变化，直接返回
+        if (CurrentValue.Equals(InValue))
         {
-            FName NameValue = FName(*InValue);
-            NameProperty->SetPropertyValue(ValuePtr, NameValue);
+            return false;
         }
-    }
-    else if (PropertyType == EPropertyType::Text)
-    {
-        FTextProperty* TextProperty = CastField<FTextProperty>(Property);
-        if (TextProperty)
+
+        bool bValueSet = false;
+
+        // 根据属性类型设置值
+        if (PropertyType == EPropertyType::String)
         {
-            FText TextValue = FText::FromString(InValue);
-            TextProperty->SetPropertyValue(ValuePtr, TextValue);
+            FStrProperty* StrProperty = CastField<FStrProperty>(Property);
+            if (StrProperty)
+            {
+                StrProperty->SetPropertyValue_InContainer(TargetObject, InValue);
+                bValueSet = true;
+            }
         }
-    }
-    
-    NotifyPropertyValueChanged();
+        else if (PropertyType == EPropertyType::Name)
+        {
+            FNameProperty* NameProperty = CastField<FNameProperty>(Property);
+            if (NameProperty)
+            {
+                NameProperty->SetPropertyValue_InContainer(TargetObject, FName(*InValue));
+                bValueSet = true;
+            }
+        }
+        else if (PropertyType == EPropertyType::Text)
+        {
+            FTextProperty* TextProperty = CastField<FTextProperty>(Property);
+            if (TextProperty)
+            {
+                TextProperty->SetPropertyValue_InContainer(TargetObject, FText::FromString(InValue));
+                bValueSet = true;
+            }
+        }
+
+        if (bValueSet)
+        {
+            // 更新缓存的当前值
+            CurrentValue = InValue;
+            
+            // 更新UI
+            ValueTextBox->SetText(FText::FromString(CurrentValue));
+            PropertyNameText->SetText(PropertyDisplayName);
+
+            // 通知值变化
+            NotifyPropertyValueChanged();
+            return true;
+        }
+
+        UE_LOG(LogTemp, Error, TEXT("设置属性值失败"));
+        return false;
+    },
+    TEXT("设置String属性值失败"));
 }
 
 FString URapidStringPropertyWidget::GetValue() const
@@ -142,17 +187,19 @@ FString URapidStringPropertyWidget::GetValue() const
 
 void URapidStringPropertyWidget::HandleTextCommitted(const FText& Text, ETextCommit::Type CommitMethod)
 {
-    if (CommitMethod == ETextCommit::OnEnter || CommitMethod == ETextCommit::OnUserMovedFocus)
+    SafeExecute([&]()
     {
-        FString NewValue = Text.ToString();
-        if (CurrentValue != NewValue)
+        // 只在按下回车键或失去焦点时更新值
+        if (CommitMethod == ETextCommit::OnEnter || CommitMethod == ETextCommit::OnUserMovedFocus)
         {
-            SetValue(NewValue);
+            SetValue(Text.ToString());
         }
-    }
+    },
+    TEXT("处理文本提交失败"));
 }
 
 void URapidStringPropertyWidget::HandleTextChanged(const FText& Text)
 {
-    // 可以在此处添加实时验证逻辑，但不要立即更新属性值
+    // 这里可以添加实时验证或格式化，但暂时不会立即更新值
+    UE_LOG(LogTemp, Verbose, TEXT("文本正在变更: %s"), *Text.ToString());
 }

@@ -51,7 +51,7 @@ public:
     ULomoLibPropertyEditorTestObject();
 
     // 基本类型
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Basic Types", meta = (DisplayName = "整数值"))
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Basic Types")
     int32 IntValue = 10;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Basic Types", meta = (DisplayName = "浮点值"))
@@ -85,4 +85,7 @@ public:
     // 不可编辑的属性，不会显示在编辑器中
     UPROPERTY()
     int32 HiddenValue = 999;
+
+    // 打印所有测试属性值
+    void PrintAllProperties();
 }; 

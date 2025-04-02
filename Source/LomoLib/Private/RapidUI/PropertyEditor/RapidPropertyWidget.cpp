@@ -1,4 +1,4 @@
- // Fill out your copyright notice in the Description page of Project Settings.
+// Fill out your copyright notice in the Description page of Project Settings.
 
 #include "RapidUI/PropertyEditor/RapidPropertyWidget.h"
 #include "UObject/UnrealType.h"
@@ -7,7 +7,6 @@ URapidPropertyWidget::URapidPropertyWidget(const FObjectInitializer& ObjectIniti
     : Super(ObjectInitializer)
     , TargetObject(nullptr)
     , Property(nullptr)
-    , ValuePtr(nullptr)
 {
 }
 
@@ -31,28 +30,29 @@ void URapidPropertyWidget::SetPropertyDisplayName(const FText& InDisplayName)
     PropertyDisplayName = InDisplayName;
 }
 
-void URapidPropertyWidget::InitializePropertyWidget(UObject* InObject, FProperty* InProperty, void* InValuePtr)
+bool URapidPropertyWidget::InitializePropertyWidget(UObject* InObject, FProperty* InProperty, const FName& InPropertyName)
 {
+    if (!InObject || !InProperty)
+    {
+        return false;
+    }
+
     TargetObject = InObject;
     Property = InProperty;
-    ValuePtr = InValuePtr;
+    PropertyName = InPropertyName.IsNone() ? Property->GetFName() : InPropertyName;
     
-    if (Property)
+    // 设置显示名称
+    if (Property->HasMetaData(TEXT("DisplayName")))
     {
-        PropertyName = Property->GetFName();
-        
-        // 设置显示名称
-        if (Property->HasMetaData(TEXT("DisplayName")))
-        {
-            PropertyDisplayName = FText::FromString(Property->GetMetaData(TEXT("DisplayName")));
-        }
-        else
-        {
-            PropertyDisplayName = FText::FromName(PropertyName);
-        }
-        
-        UpdateValue();
+        PropertyDisplayName = FText::FromString(Property->GetMetaData(TEXT("DisplayName")));
     }
+    else
+    {
+        PropertyDisplayName = FText::FromName(PropertyName);
+    }
+    
+    UpdateValue();
+    return true;
 }
 
 void URapidPropertyWidget::UpdateValue_Implementation()
