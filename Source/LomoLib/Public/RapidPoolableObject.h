@@ -11,6 +11,10 @@ UINTERFACE(MinimalAPI)
 class URapidPoolableObject : public UInterface
 {
 	GENERATED_BODY()
+
+public:
+    inline static FVector HiddenLocation = FVector(0, 0, -10000); // Location to hide objects when not in use
+               
 };
 
 /**
@@ -80,11 +84,10 @@ public:
         // 如果是Actor类型，在编辑器模式下设置文件夹路径
         if constexpr (TIsDerivedFrom<T, AActor>::Value)
         {
+            AActor* ActorObject = Cast<AActor>(Object);
+            ActorObject->SetActorHiddenInGame(false);
 #if WITH_EDITOR
-            if (AActor* ActorObject = Cast<AActor>(Object))
-            {
-                ActorObject->SetFolderPath(FName(*FString::Printf(TEXT("%s_Using"), *TypePrefix)));
-            }
+            ActorObject->SetFolderPath(FName(*FString::Printf(TEXT("%s_Using"), *TypePrefix)));
 #endif
         }
 
@@ -119,11 +122,11 @@ public:
         // 如果是Actor类型，在编辑器模式下设置文件夹路径
         if constexpr (TIsDerivedFrom<T, AActor>::Value)
         {
+            AActor* ActorObject = Cast<AActor>(Object);
+            ActorObject->SetActorLocation(URapidPoolableObject::HiddenLocation);
+            ActorObject->SetActorHiddenInGame(true);
 #if WITH_EDITOR
-            if (AActor* ActorObject = Cast<AActor>(Object))
-            {
-                ActorObject->SetFolderPath(FName(*FString::Printf(TEXT("%s_Pool"), *TypePrefix)));
-            }
+            ActorObject->SetFolderPath(FName(*FString::Printf(TEXT("%s_Pool"), *TypePrefix)));
 #endif
         }
 
@@ -171,13 +174,12 @@ private:
             // 检查T是否为Actor类型
             if constexpr (TIsDerivedFrom<T, AActor>::Value)
             {
-                static FVector HiddenLocation = FVector(0, 0, -10000); // Location to hide objects when not in use
                 // Actor类型，使用SpawnActor
                 FActorSpawnParameters SpawnParams;
                 SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
                 SpawnParams.ObjectFlags |= RF_Transient;
 
-                CreatedObject = World->SpawnActor<T>(ObjectClass, HiddenLocation, FRotator::ZeroRotator, SpawnParams);
+                CreatedObject = World->SpawnActor<T>(ObjectClass, URapidPoolableObject::HiddenLocation, FRotator::ZeroRotator, SpawnParams);
                 if (CreatedObject)
                 {
                     CreatedObject->SetActorHiddenInGame(true);

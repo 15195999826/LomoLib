@@ -21,4 +21,11 @@ class LOMOLIB_API ULomoLibBlueprintFunctionLibrary : public UBlueprintFunctionLi
 	{
 		return FJsonObjectConverter::UStructToJsonObjectString(T::StaticStruct(), &InStruct, OutJsonString, 0, 0);
 	}
+
+	// For UI
+public:
+	UFUNCTION(BlueprintCallable, Category="LomoLib|UI")
+	static void EnableUINav();
+	UFUNCTION(BlueprintCallable, Category="LomoLib|UI")
+	static void DisableUINav();
 };
