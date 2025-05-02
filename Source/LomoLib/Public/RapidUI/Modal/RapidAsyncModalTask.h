@@ -14,12 +14,13 @@ UCLASS()
 class LOMOLIB_API URapidAsyncModalTask : public UBlueprintAsyncActionBase
 {
 	GENERATED_BODY()
+
 	UPROPERTY(BlueprintAssignable)
 	FRapidModalEventSignature OnShow;
 	
 	UPROPERTY(BlueprintAssignable)
 	FRapidModalEventSignature OnClose;
-
+	
 	UFUNCTION(BlueprintCallable, meta = (BlueprintInternalUseOnly = "true", WorldContext = "WorldContextObject"),
 	Category = "LCC|UI")
 	static URapidAsyncModalTask* AsyncShowModalFromClass(const UObject* WorldContextObject, TSubclassOf<URapidModalWidget> Class, FRapidModalConfig InConfig);

@@ -31,7 +31,6 @@ URapidAsyncModalTask* URapidAsyncModalTask::AsyncShowModalFromRef(const UObject*
 void URapidAsyncModalTask::NativeOnClose(URapidModalWidget* UserWidget, ERapidModalCloseResult Result, const FString& StrPayload)
 {
 	OnClose.Broadcast(UserWidget, Result, StrPayload);
-
 	SetReadyToDestroy();
 }
 

@@ -34,7 +34,8 @@ public:
 	void OnHitActor(AActor* Actor);
 
 	void WatchPosition(const FVector& InPosition);
-	
+
+	FRotator GetSpringArmRotation() const;
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;

@@ -6,6 +6,8 @@
 
 class UWaitGroupManager;
 
+DEFINE_LOG_CATEGORY_STATIC(LogWaitGroup, Log, All);
+
 class LOMOLIB_API FLomoWaitGroup
 {
 public:
@@ -14,8 +16,7 @@ public:
 	friend UWaitGroupManager;
 	
 	FLomoWaitGroup(int32 InID) : ID(InID),Counter(0) {}
-
-
+	
 	void SetName(const FName& InName)
 	{
 		DebugName = InName;
@@ -28,9 +29,10 @@ public:
 	}
 
 	// 完成一个任务
-	void Done()
+	void Done(const FName& DoneTaskDebugName = NAME_None)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("[%s]Done %d"), *DebugName.ToString(), Counter);
+		UE_LOG(LogWaitGroup, Verbose, TEXT("[%s]Done %d, DebugName:%s, Counter:%d"), 
+		*DebugName.ToString(), ID, *DoneTaskDebugName.ToString(), Counter);
 		if (--Counter == 0)
 		{
 			if (Promise.IsValid())

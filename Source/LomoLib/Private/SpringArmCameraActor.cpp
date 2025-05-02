@@ -86,6 +86,11 @@ void ASpringArmCameraActor::WatchPosition(const FVector& InPosition)
 	SetActorLocation(InPosition);
 }
 
+FRotator ASpringArmCameraActor::GetSpringArmRotation() const
+{
+	return CameraBoom ? CameraBoom->GetComponentRotation() : FRotator::ZeroRotator;
+}
+
 void ASpringArmCameraActor::BeginPlay()
 {
 	Super::BeginPlay();

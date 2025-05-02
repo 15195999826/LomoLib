@@ -9,7 +9,7 @@ public class LomoLibEditor : ModuleRules
         PublicDependencyModuleNames.AddRange(
             new string[]
             {
-                "Core", "UnrealEd","InputCore"
+                "Core", "UnrealEd", "InputCore", "LomoLib"
             }
         );
 
@@ -27,6 +27,18 @@ public class LomoLibEditor : ModuleRules
                 "ClassViewer",
                 "PropertyEditor",
                 "ToolMenus",
+                "EditorFramework",
+                "ApplicationCore",
+                "AssetTools",
+                "Projects",
+                "Settings",
+                "DataTableEditor",
+                "MainFrame",
+                "EditorSubsystem",
+                "EditorWidgets",
+                "Blutility",
+                "DeveloperSettings",
+                "UMG"
             }
         );
     }

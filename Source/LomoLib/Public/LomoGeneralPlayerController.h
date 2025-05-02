@@ -64,6 +64,10 @@ public:
 	void RegisterInputAction(URegisterInputActionTask* InTask);
 	void UnregisterInputAction(const int& InTaskID);
 
+	ASpringArmCameraActor* GetSpringArmCamera() const
+	{
+		return SpringArmCamera.Get();
+	}
 	// 便捷使用通用相机
 protected:
 	bool bHasSpringCamera = false;
