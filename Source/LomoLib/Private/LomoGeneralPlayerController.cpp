@@ -46,6 +46,7 @@ void ALomoGeneralPlayerController::Tick(float DeltaSeconds)
 	FHitResult HitResult;
 	bool HitGround = false;
 	AActor* CanHitActor = nullptr;
+	UPrimitiveComponent* HitComponent = nullptr;
 	FVector HitGroundLocation;
 	GetHitResultUnderCursor(ECC_Visibility, false, HitResult);
 	if (HitResult.bBlockingHit)
@@ -72,19 +73,13 @@ void ALomoGeneralPlayerController::Tick(float DeltaSeconds)
 				}
 				CanHitActor = HitActor;
 			}
-
 			// UE_LOG(LogLomoLib, Log, TEXT("HitActor: %s"), *HitActor->GetName());
 		}
-		// else
-		// {
-		// 	if (HitResult.GetComponent())
-		// 	{
-		// 		UE_LOG(LogLomoLib, Log, TEXT("HitComponent: %s"), *HitResult.GetComponent()->GetName());
-		// 	}
-		// }
+
+		HitComponent = HitResult.GetComponent();
 	}
 	
-	CustomTick(DeltaSeconds, OverWidget, HitGround, HitGroundLocation, CanHitActor);
+	CustomTick(DeltaSeconds, OverWidget, HitGround, HitGroundLocation, CanHitActor, HitComponent);
 }
 
 void ALomoGeneralPlayerController::SampleMouseState(ELomoMouseState& MouseState, bool IsJustPressed, bool IsDown)

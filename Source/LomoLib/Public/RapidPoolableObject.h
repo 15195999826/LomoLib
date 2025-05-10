@@ -87,6 +87,7 @@ public:
             AActor* ActorObject = Cast<AActor>(Object);
             ActorObject->SetActorHiddenInGame(false);
 #if WITH_EDITOR
+            // Warning: 有时会出现编辑器窗口没有即时刷新的问题， 需要Focus别的位置，再去Focus Outliner窗口
             ActorObject->SetFolderPath(FName(*FString::Printf(TEXT("%s_Using"), *TypePrefix)));
 #endif
         }
@@ -101,13 +102,7 @@ public:
     {
         if (!Object)
             return;
-
-        // 添加更多有效性检查
-        if (!Object || Object->IsPendingKill())
-        {
-            return;
-        }
-    
+        
         // 检查对象是否已经在可用列表中
         if (AvailableObjects.Contains(Object))
         {

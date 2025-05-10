@@ -49,7 +49,7 @@ protected:
 	// 用于重新计算命中地面的位置， 主要用于网格地面
 	virtual void RemapHitLocation(FVector& HitLocation) {};
 
-	virtual void CustomTick(float DeltaSeconds, bool OverWidget, bool IsHitGround, const FVector& HitGroundLocation, AActor* InHitActor) {};
+	virtual void CustomTick(float DeltaSeconds, bool OverWidget, bool IsHitGround, const FVector& HitGroundLocation, AActor* InHitActor, UPrimitiveComponent* InHitComponent) {};
 
 private:
 	void SampleMouseState(ELomoMouseState& MouseState, bool IsJustPressed, bool IsDown);
