@@ -36,6 +36,8 @@ public:
 	void WatchPosition(const FVector& InPosition);
 
 	FRotator GetSpringArmRotation() const;
+	UFUNCTION(BlueprintImplementableEvent)
+	void UpdateCursorSize(float InCursorSize);
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;

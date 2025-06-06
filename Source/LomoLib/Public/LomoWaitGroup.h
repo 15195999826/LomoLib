@@ -31,7 +31,7 @@ public:
 	// 完成一个任务
 	void Done(const FName& DoneTaskDebugName = NAME_None)
 	{
-		UE_LOG(LogWaitGroup, Verbose, TEXT("[%s]Done %d, DebugName:%s, Counter:%d"), 
+		UE_LOG(LogWaitGroup, Verbose, TEXT("[%s]Done ID: %d, DebugName:%s, Counter:%d"), 
 		*DebugName.ToString(), ID, *DoneTaskDebugName.ToString(), Counter);
 		if (--Counter == 0)
 		{

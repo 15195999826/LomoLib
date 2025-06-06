@@ -7,8 +7,6 @@
 #include "RapidUIRoot.generated.h"
 
 class UOverlay;
-class UAutoDWBattleWindow;
-class UAutoDWMainWindow;
 
 UENUM(BlueprintType)
 enum class ERapidUIOverlayType : uint8
