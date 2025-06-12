@@ -37,6 +37,9 @@ void ALomoGeneralPlayerController::Tick(float DeltaSeconds)
 	if (ViewPort.IsValid())
 	{
 		FWidgetPath WidgetUnderMouse = FSlateApplication::Get().LocateWindowUnderMouse(FSlateApplication::Get().GetCursorPos() , FSlateApplication::Get().GetInteractiveTopLevelWindows(), true);
+
+		// auto LastWidget = WidgetUnderMouse.GetLastWidget();
+		// Todo: 检查是否实现了接口UIgnoreMouseOverWidget
 		
 		OverWidget = !(WidgetUnderMouse.IsValid() &&  WidgetUnderMouse.GetLastWidget() == ViewPort.ToSharedRef());
 		// UE_LOG(LogTheOne, Log, TEXT("OverWidget: %d, %s"), OverWidget, *WidgetUnderMouse.GetLastWidget()->GetWidgetClass().GetWidgetType().ToString());
@@ -56,13 +59,7 @@ void ALomoGeneralPlayerController::Tick(float DeltaSeconds)
 		{
 			if (HitResult.GetActor()->ActorHasTag("Ground"))
 			{
-				if (bHasSpringCamera)
-				{
-					HitGroundLocation = HitResult.Location;
-					RemapHitLocation(HitGroundLocation);
-					SpringArmCamera->OnHitGround(HitGroundLocation);
-				}
-				
+				HitGroundLocation = HitResult.Location;
 				HitGround = true;
 			}
 			else if (HitResult.GetActor()->ActorHasTag("CanHit"))
@@ -77,6 +74,12 @@ void ALomoGeneralPlayerController::Tick(float DeltaSeconds)
 		}
 
 		HitComponent = HitResult.GetComponent();
+	}
+	
+	if (bHasSpringCamera)
+	{
+		RemapHitLocation(HitGroundLocation, HitGround, CanHitActor);
+		SpringArmCamera->OnHitGround(HitGroundLocation);
 	}
 	
 	CustomTick(DeltaSeconds, OverWidget, HitGround, HitGroundLocation, CanHitActor, HitComponent);

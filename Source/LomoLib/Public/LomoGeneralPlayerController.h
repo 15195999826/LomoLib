@@ -47,7 +47,7 @@ protected:
 	ELomoMouseState RightMouseState = ELomoMouseState::Idle;
 
 	// 用于重新计算命中地面的位置， 主要用于网格地面
-	virtual void RemapHitLocation(FVector& HitLocation) {};
+	virtual void RemapHitLocation(FVector& HitLocation, bool IsHitGround, AActor* InHitActor) {};
 
 	virtual void CustomTick(float DeltaSeconds, bool OverWidget, bool IsHitGround, const FVector& HitGroundLocation, AActor* InHitActor, UPrimitiveComponent* InHitComponent) {};
 
