@@ -9,6 +9,7 @@
 
 class UInputAction;
 class UInputMappingContext;
+
 /**
  * 
  */
@@ -32,6 +33,12 @@ public:
 	void OnHitGround(const FVector_NetQuantize& Location);
 	UFUNCTION(BlueprintImplementableEvent)
 	void OnHitActor(AActor* Actor);
+
+	// 开始跟随指定的Actor
+	void BeginTraceActor(AActor* InTraceActor);
+
+	// 停止跟随
+	void StopTracing();
 
 	void WatchPosition(const FVector& InPosition);
 
@@ -81,6 +88,19 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TheOne Enhanced Camera | Movement Settings")
 	float RotateSpeed = 1.0f;
 
+	// 跟随配置参数
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TheOne Enhanced Camera | Trace Settings")
+	FVector FollowOffset = FVector(-800.0f, 0.0f, 400.0f);
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TheOne Enhanced Camera | Trace Settings", meta = (ClampMin = "-89.99", ClampMax = "0.0"))
+	float FollowAngle = -45.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TheOne Enhanced Camera | Trace Settings", meta = (ClampMin = "0.1", ClampMax = "10.0"))
+	float FollowSpeed = 2.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TheOne Enhanced Camera | Trace Settings")
+	bool bSmoothFollow = true;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TheOne Enhanced Camera | Movement Settings")
 	FVector DesiredLocation;
 
@@ -116,4 +136,12 @@ private:
 	void ApplyEdgeScrolling();
 	bool IsValidMousePosition(FVector2D Positions, const FVector4& Rules);
 	void OnWindowResized();
+
+	// Trace
+	UPROPERTY()
+	TObjectPtr<AActor> TraceActor;
+
+	// 跟随状态管理
+	bool bIsTracing = false;
+	FVector TargetLocation;
 };

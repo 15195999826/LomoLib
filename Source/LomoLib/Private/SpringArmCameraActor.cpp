@@ -100,6 +100,46 @@ void ASpringArmCameraActor::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
 	
+	// 处理跟随逻辑
+	if (bIsTracing && TraceActor)
+	{
+		// 获取目标Actor的位置
+		FVector ActorLocation = TraceActor->GetActorLocation();
+		
+		// 根据当前CameraBoom的Yaw旋转偏移向量
+		FRotator CurrentRotation = CameraBoom->GetComponentRotation();
+		FVector RotatedOffset = FRotationMatrix(FRotator(0, CurrentRotation.Yaw, 0)).TransformVector(FollowOffset);
+		
+		// 计算目标位置（Actor位置 + 偏移）
+		TargetLocation = ActorLocation + RotatedOffset;
+		
+		// 设置摄像机角度
+		FRotator TargetRotation = CurrentRotation;
+		TargetRotation.Pitch = FollowAngle;  // 直接设置俯视角度
+		
+		// 平滑移动到目标位置
+		if (bSmoothFollow)
+		{
+			FVector CurrentLocation = GetActorLocation();
+			FVector NewLocation = FMath::VInterpTo(CurrentLocation, TargetLocation, DeltaSeconds, FollowSpeed);
+			SetActorLocation(NewLocation);
+			
+			// 平滑调整角度
+			FRotator NewRotation = FMath::RInterpTo(CameraBoom->GetComponentRotation(), TargetRotation, DeltaSeconds, FollowSpeed);
+			CameraBoom->SetWorldRotation(NewRotation);
+		}
+		else
+		{
+			// 立即移动到目标位置和角度
+			SetActorLocation(TargetLocation);
+			CameraBoom->SetWorldRotation(TargetRotation);
+		}
+		
+		// 跟随模式下不执行原有的移动逻辑
+		return;
+	}
+	
+	// 原有的移动逻辑（只在非跟随模式下执行）
 	SetActorLocation(FMath::Lerp(CameraBoom->GetComponentLocation(), DesiredLocation, DeltaSeconds * TraceSpeed));
 	// Lerp the camera to the desired position
 	ApplyEdgeScrolling();
@@ -223,5 +263,31 @@ void ASpringArmCameraActor::OnWindowResized()
 	Right.X = (1 - (MovementZoneInPercent / 100.f)) * Result.X;
 	Right.Y = Result.X;
 	Right.W = Result.Y;	
+}
+
+void ASpringArmCameraActor::BeginTraceActor(AActor* InTraceActor)
+{
+	// 保存要跟随的Actor
+	TraceActor = InTraceActor;
+	
+	// 检查目标Actor是否有效
+	if (TraceActor)
+	{
+		bIsTracing = true;
+		UE_LOG(LogTemp, Log, TEXT("[ASpringArmCameraActor::TraceActor] 开始跟随Actor: %s"), *TraceActor->GetName());
+	}
+	else
+	{
+		// 停止跟随
+		bIsTracing = false;
+		UE_LOG(LogTemp, Warning, TEXT("[ASpringArmCameraActor::TraceActor] 目标Actor为空，停止跟随"));
+	}
+}
+
+void ASpringArmCameraActor::StopTracing()
+{
+	bIsTracing = false;
+	TraceActor = nullptr;
+	UE_LOG(LogTemp, Log, TEXT("[ASpringArmCameraActor::StopTracing] 停止跟随"));
 }
 
