@@ -97,210 +97,210 @@ void URapidArrayPropertyWidget::UpdateValue_Implementation()
 
 void URapidArrayPropertyWidget::CreateElementWidgets()
 {
-    SafeExecute([&]() {
-        if (!ArrayProperty || !InnerProperty || !ContentVerticalBox || !TargetObject)
-        {
-            UE_LOG(LogTemp, Warning, TEXT("CreateElementWidgets失败: 缺少必要的属性或组件"));
-            return;
-        }
-        
-        // 清除现有控件
-        ContentVerticalBox->ClearChildren();
-        ElementUWidgets.Empty();
-        
-        // 获取数组地址
-        void* ArrayPtr = ArrayProperty->ContainerPtrToValuePtr<void>(TargetObject);
-        
-        // 获取数组辅助类
-        FScriptArrayHelper ArrayHelper(ArrayProperty, ArrayPtr);
-        
-        // 遍历数组元素创建控件
-        for (int32 Index = 0; Index < ArrayHelper.Num(); ++Index)
-        {
-            CreateElementWidget(Index);
-        }
-    }, TEXT("创建数组元素控件失败"));
+    // SafeExecute([&]() {
+    //     if (!ArrayProperty || !InnerProperty || !ContentVerticalBox || !TargetObject)
+    //     {
+    //         UE_LOG(LogTemp, Warning, TEXT("CreateElementWidgets失败: 缺少必要的属性或组件"));
+    //         return;
+    //     }
+    //     
+    //     // 清除现有控件
+    //     ContentVerticalBox->ClearChildren();
+    //     ElementUWidgets.Empty();
+    //     
+    //     // 获取数组地址
+    //     void* ArrayPtr = ArrayProperty->ContainerPtrToValuePtr<void>(TargetObject);
+    //     
+    //     // 获取数组辅助类
+    //     FScriptArrayHelper ArrayHelper(ArrayProperty, ArrayPtr);
+    //     
+    //     // 遍历数组元素创建控件
+    //     for (int32 Index = 0; Index < ArrayHelper.Num(); ++Index)
+    //     {
+    //         CreateElementWidget(Index);
+    //     }
+    // }, TEXT("创建数组元素控件失败"));
 }
 
 void URapidArrayPropertyWidget::CreateElementWidget(int32 ElementIndex)
 {
-    SafeExecute([&, ElementIndex]() {
-        if (!ArrayProperty || !InnerProperty || !TargetObject || !ContentVerticalBox)
-        {
-            UE_LOG(LogTemp, Warning, TEXT("CreateElementWidget失败: 缺少必要的属性或组件"));
-            return;
-        }
-        
-        // 获取数组地址
-        void* ArrayPtr = ArrayProperty->ContainerPtrToValuePtr<void>(TargetObject);
-        
-        // 获取数组辅助类
-        FScriptArrayHelper ArrayHelper(ArrayProperty, ArrayPtr);
-        
-        // 检查索引是否有效
-        if (!ArrayHelper.IsValidIndex(ElementIndex))
-        {
-            UE_LOG(LogTemp, Warning, TEXT("CreateElementWidget失败: 索引无效 %d"), ElementIndex);
-            return;
-        }
-        
-        // 获取元素地址
-        void* ElementValuePtr = ArrayHelper.GetRawPtr(ElementIndex);
-        
-        // 获取属性编辑器
-        URapidPropertyEditor* PropertyEditor = Cast<URapidPropertyEditor>(GetTypedOuter<URapidPropertyEditor>());
-        if (!PropertyEditor)
-        {
-            UE_LOG(LogTemp, Warning, TEXT("CreateElementWidget失败: 找不到父级属性编辑器"));
-            return;
-        }
-        
-        // 创建元素属性控件
-        URapidPropertyWidget* ElementPropertyWidget = PropertyEditor->CreatePropertyWidgetForType(this, InnerProperty);
-        
-        if (!ElementPropertyWidget)
-        {
-            UE_LOG(LogTemp, Warning, TEXT("CreateElementWidget失败: 无法创建元素属性控件"));
-            return;
-        }
-        
-        // 设置元素名称为索引
-        FName ElementPropertyName = *FString::Printf(TEXT("%s[%d]"), *PropertyName.ToString(), ElementIndex);
-        
-        // 初始化元素控件
-        if (!ElementPropertyWidget->InitializePropertyWidget(TargetObject, InnerProperty, ElementPropertyName))
-        {
-            UE_LOG(LogTemp, Warning, TEXT("CreateElementWidget失败: 无法初始化元素属性控件"));
-            return;
-        }
-        
-        // 设置元素显示名称为索引
-        ElementPropertyWidget->SetPropertyDisplayName(FText::AsNumber(ElementIndex));
-        
-        // 绑定值变化事件
-        ElementPropertyWidget->OnPropertyValueChanged.AddDynamic(this, &URapidArrayPropertyWidget::HandleChildPropertyValueChanged);
-        
-        // 检查是否指定了元素小部件类
-        if (!ElementWidgetClass)
-        {
-            UE_LOG(LogTemp, Warning, TEXT("CreateElementWidget失败: 未指定元素小部件类"));
-            return;
-        }
-        
-        // 创建自定义元素小部件
-        URapidArrayElementWidget* ElementUWidget = CreateWidget<URapidArrayElementWidget>(this, ElementWidgetClass);
-        if (!ElementUWidget)
-        {
-            UE_LOG(LogTemp, Warning, TEXT("CreateElementWidget失败: 无法创建元素UI小部件"));
-            return;
-        }
-        
-        // 初始化元素UI小部件
-        ElementUWidget->InitializeElementWidget(TargetObject, InnerProperty, ElementValuePtr, ElementIndex);
-        
-        // 设置属性控件
-        ElementUWidget->SetElementPropertyWidget(ElementPropertyWidget);
-        
-        // 绑定删除事件
-        ElementUWidget->OnDeleteElementClicked.AddDynamic(this, &URapidArrayPropertyWidget::HandleElementDeleteClicked);
-        
-        // 添加到数组中
-        ElementUWidgets.Add(ElementUWidget);
-        
-        // 添加到内容垂直框
-        ContentVerticalBox->AddChild(ElementUWidget);
-    }, TEXT("创建数组元素UI失败"));
+    // SafeExecute([&, ElementIndex]() {
+    //     if (!ArrayProperty || !InnerProperty || !TargetObject || !ContentVerticalBox)
+    //     {
+    //         UE_LOG(LogTemp, Warning, TEXT("CreateElementWidget失败: 缺少必要的属性或组件"));
+    //         return;
+    //     }
+    //     
+    //     // 获取数组地址
+    //     void* ArrayPtr = ArrayProperty->ContainerPtrToValuePtr<void>(TargetObject);
+    //     
+    //     // 获取数组辅助类
+    //     FScriptArrayHelper ArrayHelper(ArrayProperty, ArrayPtr);
+    //     
+    //     // 检查索引是否有效
+    //     if (!ArrayHelper.IsValidIndex(ElementIndex))
+    //     {
+    //         UE_LOG(LogTemp, Warning, TEXT("CreateElementWidget失败: 索引无效 %d"), ElementIndex);
+    //         return;
+    //     }
+    //     
+    //     // 获取元素地址
+    //     void* ElementValuePtr = ArrayHelper.GetRawPtr(ElementIndex);
+    //     
+    //     // 获取属性编辑器
+    //     URapidPropertyEditor* PropertyEditor = Cast<URapidPropertyEditor>(GetTypedOuter<URapidPropertyEditor>());
+    //     if (!PropertyEditor)
+    //     {
+    //         UE_LOG(LogTemp, Warning, TEXT("CreateElementWidget失败: 找不到父级属性编辑器"));
+    //         return;
+    //     }
+    //     
+    //     // 创建元素属性控件
+    //     URapidPropertyWidget* ElementPropertyWidget = PropertyEditor->CreatePropertyWidgetForType(this, InnerProperty);
+    //     
+    //     if (!ElementPropertyWidget)
+    //     {
+    //         UE_LOG(LogTemp, Warning, TEXT("CreateElementWidget失败: 无法创建元素属性控件"));
+    //         return;
+    //     }
+    //     
+    //     // 设置元素名称为索引
+    //     FName ElementPropertyName = *FString::Printf(TEXT("%s[%d]"), *PropertyName.ToString(), ElementIndex);
+    //     
+    //     // 初始化元素控件
+    //     if (!ElementPropertyWidget->InitializePropertyWidget(TargetObject, InnerProperty, ElementPropertyName))
+    //     {
+    //         UE_LOG(LogTemp, Warning, TEXT("CreateElementWidget失败: 无法初始化元素属性控件"));
+    //         return;
+    //     }
+    //     
+    //     // 设置元素显示名称为索引
+    //     ElementPropertyWidget->SetPropertyDisplayName(FText::AsNumber(ElementIndex));
+    //     
+    //     // 绑定值变化事件
+    //     ElementPropertyWidget->OnPropertyValueChanged.AddDynamic(this, &URapidArrayPropertyWidget::HandleChildPropertyValueChanged);
+    //     
+    //     // 检查是否指定了元素小部件类
+    //     if (!ElementWidgetClass)
+    //     {
+    //         UE_LOG(LogTemp, Warning, TEXT("CreateElementWidget失败: 未指定元素小部件类"));
+    //         return;
+    //     }
+    //     
+    //     // 创建自定义元素小部件
+    //     URapidArrayElementWidget* ElementUWidget = CreateWidget<URapidArrayElementWidget>(this, ElementWidgetClass);
+    //     if (!ElementUWidget)
+    //     {
+    //         UE_LOG(LogTemp, Warning, TEXT("CreateElementWidget失败: 无法创建元素UI小部件"));
+    //         return;
+    //     }
+    //     
+    //     // 初始化元素UI小部件
+    //     ElementUWidget->InitializeElementWidget(TargetObject, InnerProperty, ElementValuePtr, ElementIndex);
+    //     
+    //     // 设置属性控件
+    //     ElementUWidget->SetElementPropertyWidget(ElementPropertyWidget);
+    //     
+    //     // 绑定删除事件
+    //     ElementUWidget->OnDeleteElementClicked.AddDynamic(this, &URapidArrayPropertyWidget::HandleElementDeleteClicked);
+    //     
+    //     // 添加到数组中
+    //     ElementUWidgets.Add(ElementUWidget);
+    //     
+    //     // 添加到内容垂直框
+    //     ContentVerticalBox->AddChild(ElementUWidget);
+    // }, TEXT("创建数组元素UI失败"));
 }
 
 void URapidArrayPropertyWidget::UpdateElementWidgets()
 {
-    SafeExecute([&]() {
-        if (!ArrayProperty || !InnerProperty || !TargetObject)
-        {
-            UE_LOG(LogTemp, Warning, TEXT("UpdateElementWidgets失败: 缺少必要的属性"));
-            return;
-        }
-        
-        // 获取数组地址
-        void* ArrayPtr = ArrayProperty->ContainerPtrToValuePtr<void>(TargetObject);
-        
-        // 检查数组元素数量是否发生变化
-        FScriptArrayHelper ArrayHelper(ArrayProperty, ArrayPtr);
-        if (ArrayHelper.Num() != ElementUWidgets.Num())
-        {
-            // 数组大小改变，需要重新创建所有元素控件
-            CreateElementWidgets();
-            return;
-        }
-        
-        // 更新现有控件的值
-        for (int32 Index = 0; Index < ElementUWidgets.Num(); ++Index)
-        {
-            if (ElementUWidgets[Index])
-            {
-                ElementUWidgets[Index]->UpdateValue();
-            }
-        }
-    }, TEXT("更新数组元素控件失败"));
+    // SafeExecute([&]() {
+    //     if (!ArrayProperty || !InnerProperty || !TargetObject)
+    //     {
+    //         UE_LOG(LogTemp, Warning, TEXT("UpdateElementWidgets失败: 缺少必要的属性"));
+    //         return;
+    //     }
+    //     
+    //     // 获取数组地址
+    //     void* ArrayPtr = ArrayProperty->ContainerPtrToValuePtr<void>(TargetObject);
+    //     
+    //     // 检查数组元素数量是否发生变化
+    //     FScriptArrayHelper ArrayHelper(ArrayProperty, ArrayPtr);
+    //     if (ArrayHelper.Num() != ElementUWidgets.Num())
+    //     {
+    //         // 数组大小改变，需要重新创建所有元素控件
+    //         CreateElementWidgets();
+    //         return;
+    //     }
+    //     
+    //     // 更新现有控件的值
+    //     for (int32 Index = 0; Index < ElementUWidgets.Num(); ++Index)
+    //     {
+    //         if (ElementUWidgets[Index])
+    //         {
+    //             ElementUWidgets[Index]->UpdateValue();
+    //         }
+    //     }
+    // }, TEXT("更新数组元素控件失败"));
 }
 
 void URapidArrayPropertyWidget::HandleAddElementClicked()
 {
-    SafeExecute([&]() {
-        if (!ArrayProperty || !InnerProperty || !TargetObject)
-        {
-            UE_LOG(LogTemp, Warning, TEXT("添加数组元素失败: 缺少必要的属性"));
-            return;
-        }
-        
-        // 获取数组地址
-        void* ArrayPtr = ArrayProperty->ContainerPtrToValuePtr<void>(TargetObject);
-        
-        // 获取数组辅助类
-        FScriptArrayHelper ArrayHelper(ArrayProperty, ArrayPtr);
-        
-        // 添加新元素
-        const int32 NewIndex = ArrayHelper.AddValue();
-        
-        // 创建新元素的控件
-        CreateElementWidget(NewIndex);
-        
-        // 通知修改
-        NotifyPropertyValueChanged();
-    }, TEXT("添加数组元素失败"));
+    // SafeExecute([&]() {
+    //     if (!ArrayProperty || !InnerProperty || !TargetObject)
+    //     {
+    //         UE_LOG(LogTemp, Warning, TEXT("添加数组元素失败: 缺少必要的属性"));
+    //         return;
+    //     }
+    //     
+    //     // 获取数组地址
+    //     void* ArrayPtr = ArrayProperty->ContainerPtrToValuePtr<void>(TargetObject);
+    //     
+    //     // 获取数组辅助类
+    //     FScriptArrayHelper ArrayHelper(ArrayProperty, ArrayPtr);
+    //     
+    //     // 添加新元素
+    //     const int32 NewIndex = ArrayHelper.AddValue();
+    //     
+    //     // 创建新元素的控件
+    //     CreateElementWidget(NewIndex);
+    //     
+    //     // 通知修改
+    //     NotifyPropertyValueChanged();
+    // }, TEXT("添加数组元素失败"));
 }
 
 void URapidArrayPropertyWidget::HandleElementDeleteClicked(int32 ElementIndex)
 {
-    SafeExecute([&, ElementIndex]() {
-        if (!ArrayProperty || !InnerProperty || !TargetObject)
-        {
-            UE_LOG(LogTemp, Warning, TEXT("删除数组元素失败: 缺少必要的属性"));
-            return;
-        }
-        
-        // 获取数组地址
-        void* ArrayPtr = ArrayProperty->ContainerPtrToValuePtr<void>(TargetObject);
-        
-        // 获取数组辅助类
-        FScriptArrayHelper ArrayHelper(ArrayProperty, ArrayPtr);
-        
-        // 检查索引是否有效
-        if (!ArrayHelper.IsValidIndex(ElementIndex))
-        {
-            UE_LOG(LogTemp, Warning, TEXT("删除数组元素失败: 索引无效 %d"), ElementIndex);
-            return;
-        }
-        
-        // 删除元素
-        ArrayHelper.RemoveValues(ElementIndex, 1);
-        
-        // 重新创建所有元素控件
-        CreateElementWidgets();
-        
-        // 通知修改
-        NotifyPropertyValueChanged();
-    }, TEXT("删除数组元素失败"));
+    // SafeExecute([&, ElementIndex]() {
+    //     if (!ArrayProperty || !InnerProperty || !TargetObject)
+    //     {
+    //         UE_LOG(LogTemp, Warning, TEXT("删除数组元素失败: 缺少必要的属性"));
+    //         return;
+    //     }
+    //     
+    //     // 获取数组地址
+    //     void* ArrayPtr = ArrayProperty->ContainerPtrToValuePtr<void>(TargetObject);
+    //     
+    //     // 获取数组辅助类
+    //     FScriptArrayHelper ArrayHelper(ArrayProperty, ArrayPtr);
+    //     
+    //     // 检查索引是否有效
+    //     if (!ArrayHelper.IsValidIndex(ElementIndex))
+    //     {
+    //         UE_LOG(LogTemp, Warning, TEXT("删除数组元素失败: 索引无效 %d"), ElementIndex);
+    //         return;
+    //     }
+    //     
+    //     // 删除元素
+    //     ArrayHelper.RemoveValues(ElementIndex, 1);
+    //     
+    //     // 重新创建所有元素控件
+    //     CreateElementWidgets();
+    //     
+    //     // 通知修改
+    //     NotifyPropertyValueChanged();
+    // }, TEXT("删除数组元素失败"));
 }
 
 void URapidArrayPropertyWidget::HandleChildPropertyValueChanged(UObject* Object, FName InPropertyName, URapidPropertyWidget* PropertyWidget)

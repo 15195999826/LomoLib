@@ -50,7 +50,10 @@ protected:
 	virtual void BeginPlay() override;
 
 	virtual void Tick(float DeltaSeconds) override;
-	// Input Start	
+	// Input Start
+public:
+	UDecalComponent* GetCursorDecal() const { return CursorDecal; }
+
 protected:
 	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly, Category = Cursor)
 	TObjectPtr<UDecalComponent> CursorDecal;

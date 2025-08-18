@@ -51,6 +51,8 @@ void ALomoGeneralPlayerController::Tick(float DeltaSeconds)
 	AActor* CanHitActor = nullptr;
 	UPrimitiveComponent* HitComponent = nullptr;
 	FVector HitGroundLocation;
+
+	// Todo: 研究一下射线发射方向问题, 射不到卡片大概是因为卡片碰撞不对
 	GetHitResultUnderCursor(ECC_Visibility, false, HitResult);
 	if (HitResult.bBlockingHit)
 	{
@@ -70,6 +72,8 @@ void ALomoGeneralPlayerController::Tick(float DeltaSeconds)
 				}
 				CanHitActor = HitActor;
 			}
+			// 在HitActor绘制Debug球体
+			// DrawDebugSphere(GetWorld(), HitResult.Location, 5.0f, 12, FColor::Red, false, 0.1f);
 			// UE_LOG(LogLomoLib, Log, TEXT("HitActor: %s"), *HitActor->GetName());
 		}
 
@@ -83,6 +87,31 @@ void ALomoGeneralPlayerController::Tick(float DeltaSeconds)
 	}
 	
 	CustomTick(DeltaSeconds, OverWidget, HitGround, HitGroundLocation, CanHitActor, HitComponent);
+}
+
+void ALomoGeneralPlayerController::DebugDrawTextNearMouse(const FString& InDebugText, const FColor& InColor,
+	float InDuration) const
+{
+	// 显示"等待确认"文本
+	float MouseX, MouseY;
+	GetMousePosition(MouseX, MouseY);
+    
+	FVector WorldLocation, WorldDirection;
+	if (DeprojectScreenPositionToWorld(MouseX, MouseY, WorldLocation, WorldDirection))
+	{
+		FVector TextLocation = WorldLocation + WorldDirection * 500.0f;
+        
+		DrawDebugString(
+			GetWorld(),
+			TextLocation,
+			InDebugText,
+			nullptr,
+			InColor,
+			InDuration,
+			true,
+			4.f
+		);
+	}
 }
 
 void ALomoGeneralPlayerController::SampleMouseState(ELomoMouseState& MouseState, bool IsJustPressed, bool IsDown)

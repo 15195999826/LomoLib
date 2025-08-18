@@ -30,7 +30,8 @@ public class LomoLib : ModuleRules
 				"UMG",
 				"InputCore",
 				"Json",
-				"JsonUtilities"
+				"JsonUtilities",
+				"Niagara"
 				// ... add other public dependencies that you statically link with here ...
 			}
 			);
@@ -46,13 +47,16 @@ public class LomoLib : ModuleRules
 				// ... add private dependencies that you statically link with here ...	
 			}
 			);
-		
-		
+
+
 		DynamicallyLoadedModuleNames.AddRange(
-			new string[]
-			{
+			new string[] {
 				// ... add any modules that your module loads dynamically here ...
 			}
-			);
+		);
+		
+		if (Target.bBuildEditor) {
+			PrivateDependencyModuleNames.AddRange(new string[]{"UnrealEd"});
+		}
 	}
 }

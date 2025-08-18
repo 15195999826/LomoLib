@@ -40,17 +40,17 @@ bool URapidPropertyWidget::InitializePropertyWidget(UObject* InObject, FProperty
     TargetObject = InObject;
     Property = InProperty;
     PropertyName = InPropertyName.IsNone() ? Property->GetFName() : InPropertyName;
-    
-    // 设置显示名称
-    if (Property->HasMetaData(TEXT("DisplayName")))
-    {
-        PropertyDisplayName = FText::FromString(Property->GetMetaData(TEXT("DisplayName")));
-    }
-    else
-    {
-        PropertyDisplayName = FText::FromName(PropertyName);
-    }
-    
+    //
+    // // 设置显示名称
+    // if (Property->HasMetaData(TEXT("DisplayName")))
+    // {
+    //     PropertyDisplayName = FText::FromString(Property->GetMetaData(TEXT("DisplayName")));
+    // }
+    // else
+    // {
+    //     PropertyDisplayName = FText::FromName(PropertyName);
+    // }
+    //
     UpdateValue();
     return true;
 }
@@ -62,11 +62,11 @@ void URapidPropertyWidget::UpdateValue_Implementation()
 
 FString URapidPropertyWidget::GetPropertyMetaData(const FName& MetaDataKey) const
 {
-    if (Property && Property->HasMetaData(MetaDataKey))
-    {
-        return Property->GetMetaData(MetaDataKey);
-    }
-    
+    // if (Property && Property->HasMetaData(MetaDataKey))
+    // {
+    //     return Property->GetMetaData(MetaDataKey);
+    // }
+    //
     return FString();
 }
 

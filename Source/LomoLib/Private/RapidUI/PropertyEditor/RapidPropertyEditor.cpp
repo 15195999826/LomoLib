@@ -194,13 +194,13 @@ FString URapidPropertyEditor::GetPropertyDisplayName(FProperty* Property) const
     {
         return TEXT("");
     }
-    
-    // 使用DisplayName元数据如果存在
-    if (Property->HasMetaData(TEXT("DisplayName")))
-    {
-        return Property->GetMetaData(TEXT("DisplayName"));
-    }
-    
+    //
+    // // 使用DisplayName元数据如果存在
+    // if (Property->HasMetaData(TEXT("DisplayName")))
+    // {
+    //     return Property->GetMetaData(TEXT("DisplayName"));
+    // }
+    //
     // 否则使用属性名
     return Property->GetName();
 }

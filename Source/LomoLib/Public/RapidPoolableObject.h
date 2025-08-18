@@ -55,11 +55,12 @@ class TRapidObjectPool
 
 public:
     TRapidObjectPool(UObject* InOwner, TSubclassOf<T> InObjectClass, const FString& InTypePrefix,
-                     int32 InInitialPoolSize = 5, int32 InGrowNum = 3)
+                     int32 InInitialPoolSize = 5, int32 InGrowNum = 3, bool InAutoVisibleAtStart = true)
         : TypePrefix(InTypePrefix)
           , GrowNum(InGrowNum)
           , Owner(InOwner)
           , ObjectClass(InObjectClass)
+          , AutoVisibleAtStart(InAutoVisibleAtStart)
     {
         GrowPool(InInitialPoolSize);
     }
@@ -85,7 +86,10 @@ public:
         if constexpr (TIsDerivedFrom<T, AActor>::Value)
         {
             AActor* ActorObject = Cast<AActor>(Object);
-            ActorObject->SetActorHiddenInGame(false);
+            if (AutoVisibleAtStart)
+            {
+                ActorObject->SetActorHiddenInGame(false);
+            }
 #if WITH_EDITOR
             // Warning: 有时会出现编辑器窗口没有即时刷新的问题， 需要Focus别的位置，再去Focus Outliner窗口
             ActorObject->SetFolderPath(FName(*FString::Printf(TEXT("%s_Using"), *TypePrefix)));
@@ -204,6 +208,7 @@ private:
     int32 GrowNum;
     TWeakObjectPtr<UObject> Owner;
     TSubclassOf<T> ObjectClass;
+    bool AutoVisibleAtStart{true}; // 是否在开始时自动设置对象可见
     TArray<T*> AvailableObjects;
     TMap<FString, T*> UsingObjects;
 };

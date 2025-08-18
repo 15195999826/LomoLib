@@ -51,6 +51,7 @@ protected:
 
 	virtual void CustomTick(float DeltaSeconds, bool OverWidget, bool IsHitGround, const FVector& HitGroundLocation, AActor* InHitActor, UPrimitiveComponent* InHitComponent) {};
 
+	void DebugDrawTextNearMouse(const FString& InDebugText, const FColor& InColor = FColor::White, float InDuration = 0.f) const;
 private:
 	void SampleMouseState(ELomoMouseState& MouseState, bool IsJustPressed, bool IsDown);
 

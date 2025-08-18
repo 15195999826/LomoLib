@@ -72,40 +72,40 @@ protected:
     void NotifyPropertyValueChanged();
     
     /** 安全执行方法的辅助函数，统一处理异常 */
-    template<typename F>
-    void SafeExecute(F&& Operation, const TCHAR* ErrorMessage)
-    {
-        try
-        {
-            Operation();
-        }
-        catch (const std::exception& Ex)
-        {
-            UE_LOG(LogTemp, Error, TEXT("%s - 异常: %s"), ErrorMessage, UTF8_TO_TCHAR(Ex.what()));
-        }
-        catch (...)
-        {
-            UE_LOG(LogTemp, Error, TEXT("%s - 未知异常"), ErrorMessage);
-        }
-    }
-    
-    /** 安全执行方法的辅助函数，带返回值，统一处理异常 */
-    template<typename F, typename RetType = decltype(std::declval<F>()())>
-    RetType SafeExecuteWithRet(F&& Operation, const TCHAR* ErrorMessage)
-    {
-        try
-        {
-            return Operation();
-        }
-        catch (const std::exception& Ex)
-        {
-            UE_LOG(LogTemp, Error, TEXT("%s - 异常: %s"), ErrorMessage, UTF8_TO_TCHAR(Ex.what()));
-            return RetType();
-        }
-        catch (...)
-        {
-            UE_LOG(LogTemp, Error, TEXT("%s - 未知异常"), ErrorMessage);
-            return RetType();
-        }
-    }
+    // template<typename F>
+    // void SafeExecute(F&& Operation, const TCHAR* ErrorMessage)
+    // {
+    //     try
+    //     {
+    //         Operation();
+    //     }
+    //     catch (const std::exception& Ex)
+    //     {
+    //         UE_LOG(LogTemp, Error, TEXT("%s - 异常: %s"), ErrorMessage, UTF8_TO_TCHAR(Ex.what()));
+    //     }
+    //     catch (...)
+    //     {
+    //         UE_LOG(LogTemp, Error, TEXT("%s - 未知异常"), ErrorMessage);
+    //     }
+    // }
+    //
+    // /** 安全执行方法的辅助函数，带返回值，统一处理异常 */
+    // template<typename F, typename RetType = decltype(std::declval<F>()())>
+    // RetType SafeExecuteWithRet(F&& Operation, const TCHAR* ErrorMessage)
+    // {
+    //     try
+    //     {
+    //         return Operation();
+    //     }
+    //     catch (const std::exception& Ex)
+    //     {
+    //         UE_LOG(LogTemp, Error, TEXT("%s - 异常: %s"), ErrorMessage, UTF8_TO_TCHAR(Ex.what()));
+    //         return RetType();
+    //     }
+    //     catch (...)
+    //     {
+    //         UE_LOG(LogTemp, Error, TEXT("%s - 未知异常"), ErrorMessage);
+    //         return RetType();
+    //     }
+    // }
 };

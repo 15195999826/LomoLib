@@ -29,10 +29,14 @@ public:
 	}
 
 	// 完成一个任务
-	void Done(const FName& DoneTaskDebugName = NAME_None)
+	void Done(const FName& DoneTaskDebugName = NAME_None, bool bDebug = true)
 	{
-		UE_LOG(LogWaitGroup, Verbose, TEXT("[%s]Done ID: %d, DebugName:%s, Counter:%d"), 
-		*DebugName.ToString(), ID, *DoneTaskDebugName.ToString(), Counter);
+		if (bDebug)
+		{
+			UE_LOG(LogWaitGroup, Verbose, TEXT("[%s]Done ID: %d, DebugName:%s, Counter:%d"),
+			       *DebugName.ToString(), ID, *DoneTaskDebugName.ToString(), Counter);
+		}
+
 		if (--Counter == 0)
 		{
 			if (Promise.IsValid())
@@ -65,6 +69,11 @@ public:
 				PendingFunction();
 			}
 		});
+	}
+
+	void SetCancelled()
+	{
+		bIsCancelled = true;
 	}
 
 	const FName& GetDebugName() const

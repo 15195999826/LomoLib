@@ -20,15 +20,15 @@ void URapidIntPropertyWidget::SetupSpinBoxFromProperty()
     ValueSpinBox->SetDelta(1.0f);
     
     // 从元数据中读取最小最大值
-    if (Property->HasMetaData(TEXT("ClampMin")))
-    {
-        ValueSpinBox->SetMinValue(FCString::Atoi(*Property->GetMetaData(TEXT("ClampMin"))));
-    }
-    
-    if (Property->HasMetaData(TEXT("ClampMax")))
-    {
-        ValueSpinBox->SetMaxValue(FCString::Atoi(*Property->GetMetaData(TEXT("ClampMax"))));
-    }
+    // if (Property->HasMetaData(TEXT("ClampMin")))
+    // {
+    //     ValueSpinBox->SetMinValue(FCString::Atoi(*Property->GetMetaData(TEXT("ClampMin"))));
+    // }
+    //
+    // if (Property->HasMetaData(TEXT("ClampMax")))
+    // {
+    //     ValueSpinBox->SetMaxValue(FCString::Atoi(*Property->GetMetaData(TEXT("ClampMax"))));
+    // }
 }
 
 bool URapidIntPropertyWidget::InitializePropertyWidget(UObject* InObject, FProperty* InProperty, const FName& InPropertyName)
@@ -70,57 +70,58 @@ bool URapidIntPropertyWidget::InitializePropertyWidget(UObject* InObject, FPrope
 
 void URapidIntPropertyWidget::UpdateValue_Implementation()
 {
-    SafeExecute([&]() {
-        // 获取属性值
-        FIntProperty* IntProperty = CastField<FIntProperty>(Property);
-        if (IntProperty && TargetObject)
-        {
-            CurrentValue = IntProperty->GetPropertyValue_InContainer(TargetObject);
-            ValueSpinBox->SetValue(CurrentValue);
-            PropertyNameText->SetText(PropertyDisplayName);
-        }
-    }, TEXT("更新Int属性值失败"));
+    // SafeExecute([&]() {
+    //     // 获取属性值
+    //     FIntProperty* IntProperty = CastField<FIntProperty>(Property);
+    //     if (IntProperty && TargetObject)
+    //     {
+    //         CurrentValue = IntProperty->GetPropertyValue_InContainer(TargetObject);
+    //         ValueSpinBox->SetValue(CurrentValue);
+    //         PropertyNameText->SetText(PropertyDisplayName);
+    //     }
+    // }, TEXT("更新Int属性值失败"));
 }
 
 bool URapidIntPropertyWidget::SetValue(int32 InValue)
 {
-    return SafeExecuteWithRet([&]() -> bool {
-        if (!TargetObject || !Property)
-        {
-            UE_LOG(LogTemp, Error, TEXT("设置Int属性值失败: 对象或属性为空"));
-            return false;
-        }
-        
-        FIntProperty* IntProperty = CastField<FIntProperty>(Property);
-        if (!IntProperty)
-        {
-            UE_LOG(LogTemp, Error, TEXT("设置Int属性值失败: 属性类型不是Int"));
-            return false;
-        }
-        
-        // 如果值没有变化，直接返回
-        if (CurrentValue == InValue)
-        {
-            return false;
-        }
-        
-        // 安全地设置属性值
-        IntProperty->SetPropertyValue_InContainer(TargetObject, InValue);
-        CurrentValue = InValue;
-        
-        // 只更新当值不同时
-        if (FMath::RoundToInt(ValueSpinBox->GetValue()) != InValue)
-        {
-            ValueSpinBox->SetValue(InValue);
-        }
-        
-        // 确保属性名称文本正确显示
-        PropertyNameText->SetText(PropertyDisplayName);
-        
-        // 通知属性值已更改
-        NotifyPropertyValueChanged();
-        return true;
-    }, TEXT("设置Int属性值失败"));
+    return true;
+    // return SafeExecuteWithRet([&]() -> bool {
+    //     if (!TargetObject || !Property)
+    //     {
+    //         UE_LOG(LogTemp, Error, TEXT("设置Int属性值失败: 对象或属性为空"));
+    //         return false;
+    //     }
+    //     
+    //     FIntProperty* IntProperty = CastField<FIntProperty>(Property);
+    //     if (!IntProperty)
+    //     {
+    //         UE_LOG(LogTemp, Error, TEXT("设置Int属性值失败: 属性类型不是Int"));
+    //         return false;
+    //     }
+    //     
+    //     // 如果值没有变化，直接返回
+    //     if (CurrentValue == InValue)
+    //     {
+    //         return false;
+    //     }
+    //     
+    //     // 安全地设置属性值
+    //     IntProperty->SetPropertyValue_InContainer(TargetObject, InValue);
+    //     CurrentValue = InValue;
+    //     
+    //     // 只更新当值不同时
+    //     if (FMath::RoundToInt(ValueSpinBox->GetValue()) != InValue)
+    //     {
+    //         ValueSpinBox->SetValue(InValue);
+    //     }
+    //     
+    //     // 确保属性名称文本正确显示
+    //     PropertyNameText->SetText(PropertyDisplayName);
+    //     
+    //     // 通知属性值已更改
+    //     NotifyPropertyValueChanged();
+    //     return true;
+    // }, TEXT("设置Int属性值失败"));
 }
 
 int32 URapidIntPropertyWidget::GetValue() const
@@ -130,11 +131,11 @@ int32 URapidIntPropertyWidget::GetValue() const
 
 void URapidIntPropertyWidget::HandleValueChanged(float NewValue)
 {
-    SafeExecute([&, NewValue]() {
-        int32 NewIntValue = FMath::RoundToInt(NewValue);
-        if (CurrentValue != NewIntValue)
-        {
-            SetValue(NewIntValue);
-        }
-    }, TEXT("处理数值变化失败"));
+    // SafeExecute([&, NewValue]() {
+    //     int32 NewIntValue = FMath::RoundToInt(NewValue);
+    //     if (CurrentValue != NewIntValue)
+    //     {
+    //         SetValue(NewIntValue);
+    //     }
+    // }, TEXT("处理数值变化失败"));
 }
