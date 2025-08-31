@@ -62,6 +62,15 @@ public:
 
 		Promise = MakeShared<TPromise<void>>();
 		PendingFunction = Forward<FunctorType>(InFunction);
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 6
+		Promise->GetFuture().Next([this]()
+		{
+			if (!bIsCancelled && PendingFunction)
+			{
+				PendingFunction();
+			}
+		});
+#else
 		Promise->GetFuture().Next([this](int32)
 		{
 			if (!bIsCancelled && PendingFunction)
@@ -69,6 +78,7 @@ public:
 				PendingFunction();
 			}
 		});
+#endif
 	}
 
 	void SetCancelled()

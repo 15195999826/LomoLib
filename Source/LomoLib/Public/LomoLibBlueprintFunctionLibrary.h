@@ -6,6 +6,26 @@
 #include "JsonObjectConverter.h"
 #include "Kismet/BlueprintFunctionLibrary.h"
 #include "LomoLibBlueprintFunctionLibrary.generated.h"
+USTRUCT(BlueprintType)
+struct LOMOLIB_API FFaceRotation
+{
+	GENERATED_BODY()
+
+	FFaceRotation(): FaceRotation()
+	{
+	}
+
+	FFaceRotation(bool bInNeedRotate, const FRotator& InFaceRotation)
+		: bNeedRotate(bInNeedRotate), FaceRotation(InFaceRotation)
+	{
+	}
+
+	UPROPERTY(BlueprintReadOnly)
+	bool bNeedRotate = true;
+
+	UPROPERTY(BlueprintReadOnly, Category = "EXGAS|FaceRotation")
+	FRotator FaceRotation;
+};
 
 /**
  * 
@@ -34,4 +54,16 @@ public:
 	// 于是写一个函数， 创建一个Actor, 设置到世界坐标, Attach到B,KeepWorldTransform， 然后获取相对位置的方案。
 	UFUNCTION(BlueprintCallable, Category="LomoLib|Debug")
 	static FVector WorldToRelativeLocation(UObject* WorldContext, const FVector& InWorldLocation, AActor* RelativeToActor);
+	// For WaitGroup
+	UFUNCTION(BlueprintCallable, meta = (WorldContext = "WorldContextObject"))
+	static void DoneWaitGroupOnce(UObject* WorldContextObject, const int32 InWaitGroupID, const FName InDebugText = TEXT(""));
+
+	/**
+	 * 从InSourceLocation面向InTargetLocation的方向
+	 * @param InTargetLocation
+	 * @param InSourceLocation 
+	 * @return 
+	 */
+	UFUNCTION(BlueprintCallable)
+	static FFaceRotation GetFaceRotation(const FVector& InTargetLocation, const FVector& InSourceLocation);
 };
