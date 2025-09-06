@@ -38,6 +38,10 @@ private:
 	void BatchExport();
 	void OpenSettings();
 	
+	// 程序动画相关功能
+	void RefreshAnimationAssets();
+	void GenerateReverseAnimations();
+	
 	// 测试函数
 	void TestExcelConverter();
 	
