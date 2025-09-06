@@ -11,7 +11,7 @@ protected: \
 PropertyType PropertyName; \
 public: \
 UPROPERTY(BlueprintAssignable) \
-FProjectJ##PropertyName##ChangeSignature On##PropertyName##Change; \
+F##PropertyName##ChangeSignature On##PropertyName##Change; \
 FORCEINLINE PropertyType Get##PropertyName() const { return PropertyName; } \
 FORCEINLINE void Set##PropertyName(PropertyType NewVal) \
 { \
@@ -43,6 +43,6 @@ protected:
 	TObjectPtr<USceneComponent> SceneRoot;
 	
 	// Define player attributes Template
-	DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FProjectJTestAttrChangeSignature, int32, OldVal, int32, NewVal);
+	DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FTestAttrChangeSignature, int32, OldVal, int32, NewVal);
 	DEFINE_PLAYER_ATTRIBUTE(int32, TestAttr)
 };
