@@ -110,6 +110,9 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TheOne Enhanced Camera | Movement Settings")
 	bool EnableEdgeScrolling = true;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TheOne Enhanced Camera | Movement Settings")
+	bool EnableZoom = false;
+
 	UPROPERTY(
 		EditAnywhere,
 		BlueprintReadWrite,

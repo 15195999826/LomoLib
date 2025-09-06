@@ -180,6 +180,11 @@ void ASpringArmCameraActor::OnMoveCamera(const FInputActionValue& InputActionVal
 
 void ASpringArmCameraActor::OnZoomCamera(const FInputActionValue& Value)
 {
+	if (!EnableZoom)
+	{
+		return;
+	}
+	
 	DesiredZoom = FMath::Clamp(
 		CurrentZoom + Value.GetMagnitude() * -ZoomSpeed,
 		MinimumZoom,
