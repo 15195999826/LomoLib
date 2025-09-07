@@ -14,16 +14,17 @@ FName UProgramAnimationSettings::GetCategoryName() const
 	return FApp::GetProjectName();
 }
 
-const FProgramAnimationData& UProgramAnimationSettings::GetAnimationData(const FName& AnimationName) const
+const FProgramAnimationData& UProgramAnimationSettings::GetAnimationData(const FName& AnimationName)
 {
+	auto Settings = GetDefault<UProgramAnimationSettings>();
 	// 1. 优先查找生成的反转动画
-	if (const FProgramAnimationData* ReverseData = GeneratedReverseAnimations.Find(AnimationName))
+	if (const FProgramAnimationData* ReverseData = Settings->GeneratedReverseAnimations.Find(AnimationName))
 	{
 		return *ReverseData;
 	}
 
 	// 2. 查找普通动画资产
-	if (const TSoftObjectPtr<UProgramAnimationDataAsset>* AssetPtr = ProgramAnimationAssets.Find(AnimationName))
+	if (const TSoftObjectPtr<UProgramAnimationDataAsset>* AssetPtr = Settings->ProgramAnimationAssets.Find(AnimationName))
 	{
 		if (AssetPtr->IsValid())
 		{

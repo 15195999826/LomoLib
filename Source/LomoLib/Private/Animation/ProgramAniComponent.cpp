@@ -48,8 +48,7 @@ int32 UProgramAniComponent::PlayProgramAnimationByName(const FName& InAniName, c
                                                        const FVector& EndLocation, bool bRelativeToParent, float StartProgress, const FProgramAnimationParams& Params)
 {
 	// 通过动画设置获取动画数据
-	const auto* Settings = GetDefault<UProgramAnimationSettings>();
-	return PlayProgramAnimation(Settings->GetAnimationData(InAniName), StartLocation, EndLocation, bRelativeToParent, StartProgress, true, Params);
+	return PlayProgramAnimation(UProgramAnimationSettings::GetAnimationData(InAniName), StartLocation, EndLocation, bRelativeToParent, StartProgress, true, Params);
 }
 
 int32 UProgramAniComponent::ReverseLastAnimation(bool bAssignNewEndLocation, const FVector& NewEndLocation)

@@ -43,5 +43,5 @@ public:
 	 * @param AnimationName 动画名称
 	 * @return 动画数据，如果找不到返回nullptr
 	 */
-	const FProgramAnimationData& GetAnimationData(const FName& AnimationName) const;
+	static const FProgramAnimationData& GetAnimationData(const FName& AnimationName);
 };
