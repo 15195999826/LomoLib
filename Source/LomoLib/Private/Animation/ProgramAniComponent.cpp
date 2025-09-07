@@ -44,21 +44,12 @@ void UProgramAniComponent::BindToSceneComponent(USceneComponent* InComponent)
 	OwnerSceneComponent = InComponent;
 }
 
-int32 UProgramAniComponent::PlayProgramAnimation(const FName& InAniName, const FVector& StartLocation,
+int32 UProgramAniComponent::PlayProgramAnimationByName(const FName& InAniName, const FVector& StartLocation,
                                                        const FVector& EndLocation, bool bRelativeToParent, float StartProgress, const FProgramAnimationParams& Params)
 {
 	// 通过动画设置获取动画数据
 	const auto* Settings = GetDefault<UProgramAnimationSettings>();
-	const FProgramAnimationData* AniDataPtr = Settings->GetAnimationData(InAniName);
-	if (!AniDataPtr)
-	{
-		UE_LOG(LogTemp, Error, TEXT("[%s] Animation data not found: %s"), *GetOwner()->GetName(), *InAniName.ToString());
-		return INDEX_NONE;
-	}
-	
-	const auto& AniData = *AniDataPtr;
-	
-	return PlayProgramAnimation(AniData, StartLocation, EndLocation, bRelativeToParent, StartProgress, true, Params);
+	return PlayProgramAnimation(Settings->GetAnimationData(InAniName), StartLocation, EndLocation, bRelativeToParent, StartProgress, true, Params);
 }
 
 int32 UProgramAniComponent::ReverseLastAnimation(bool bAssignNewEndLocation, const FVector& NewEndLocation)

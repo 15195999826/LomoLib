@@ -2,23 +2,24 @@
 
 #include "Settings/ProgramAnimationSettings.h"
 
+#include "LomoLib.h"
+
 UProgramAnimationSettings::UProgramAnimationSettings()
 {
-	// 设置默认扫描目录
-	ProgramAnimationAssetRootDir.Add(TEXT("Data/Animations"));
+
 }
 
 FName UProgramAnimationSettings::GetCategoryName() const
 {
-	return FName("LomoLib");
+	return FApp::GetProjectName();
 }
 
-const FProgramAnimationData* UProgramAnimationSettings::GetAnimationData(const FName& AnimationName) const
+const FProgramAnimationData& UProgramAnimationSettings::GetAnimationData(const FName& AnimationName) const
 {
 	// 1. 优先查找生成的反转动画
 	if (const FProgramAnimationData* ReverseData = GeneratedReverseAnimations.Find(AnimationName))
 	{
-		return ReverseData;
+		return *ReverseData;
 	}
 
 	// 2. 查找普通动画资产
@@ -29,11 +30,13 @@ const FProgramAnimationData* UProgramAnimationSettings::GetAnimationData(const F
 			UProgramAnimationDataAsset* DataAsset = AssetPtr->LoadSynchronous();
 			if (DataAsset)
 			{
-				return &DataAsset->AnimationData;
+				return DataAsset->AnimationData;
 			}
 		}
 	}
 
 	// 3. 没有找到
-	return nullptr;
+	static FProgramAnimationData InvalidData;
+	UE_LOG(LogLomoLib, Warning, TEXT("[UProgramAnimationSettings] Animation data not found: %s"), *AnimationName.ToString());
+	return InvalidData;
 }

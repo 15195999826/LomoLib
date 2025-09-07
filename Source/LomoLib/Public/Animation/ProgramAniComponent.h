@@ -63,12 +63,12 @@ public:
 	
 	// 播放命名动画（需要通过动画服务获取数据）
 	UFUNCTION(BlueprintCallable, Category = "Program Animation")
-	int32 PlayProgramAnimation(const FName& InAniName, 
+	int32 PlayProgramAnimationByName(const FName& InAniName, 
 					   const FVector& StartLocation, 
 					   const FVector& EndLocation,
 					   bool bRelativeToParent = false,
 					   float StartProgress = 0.0f,
-					   const FProgramAnimationParams& Params = FProgramAnimationParams::Invalid);
+					   const FProgramAnimationParams& Params = FProgramAnimationParams());
 
 	UFUNCTION(BlueprintCallable, Category = "Program Animation")
 	int32 ReverseLastAnimation(bool bAssignNewEndLocation = false,

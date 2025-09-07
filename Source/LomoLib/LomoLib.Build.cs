@@ -31,7 +31,8 @@ public class LomoLib : ModuleRules
 				"InputCore",
 				"Json",
 				"JsonUtilities",
-				"Niagara"
+				"Niagara",
+				"DeveloperSettings"
 				// ... add other public dependencies that you statically link with here ...
 			}
 			);
