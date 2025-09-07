@@ -128,6 +128,9 @@ public:
         return bIsPlayingAnimation ? CurrentAnimationData.AnimationName : NAME_None;
     }
 
+	UFUNCTION(BlueprintCallable, BlueprintPure)
+	USceneComponent* GetTargetTransformComponent() const;
+
 private:
 	UPROPERTY()
 	TWeakObjectPtr<USceneComponent> OwnerSceneComponent;
@@ -205,6 +208,4 @@ private:
 	 * 缓存锚点位置（在动画开始时调用，基于初始Actor位置计算）
 	 */
 	void CacheAnchorLocations();
-
-	USceneComponent* GetTargetTransformComponent() const;
 };

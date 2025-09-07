@@ -440,22 +440,80 @@ void FLomoLibEditorModule::RefreshAnimationAssets()
 		{
 			if (!RootDir.IsEmpty())
 			{
-				FString AnimationSearchPath = FPaths::Combine(FPaths::ProjectContentDir(), RootDir);
+				// 🔧 使用多个路径前缀来查询
+				TArray<FString> SearchPrefixes = {
+					FPaths::ProjectContentDir(),           // 主项目Content目录
+					FPaths::ProjectDir(),                   // 项目根目录
+					FPaths::Combine(FPaths::ProjectDir(), TEXT("Plugins"))  // 插件目录
+				};
 				
-				// 查找所有 .uasset 文件
 				TArray<FString> AnimationAssetPaths;
-				IFileManager::Get().FindFilesRecursive(AnimationAssetPaths, *AnimationSearchPath, TEXT("*.uasset"), true, false);
+				
+				for (const FString& Prefix : SearchPrefixes)
+				{
+					FString AnimationSearchPath = FPaths::Combine(Prefix, RootDir);
+					
+					UE_LOG(LogTemp, Display, TEXT("🔍 尝试搜索路径: %s"), *AnimationSearchPath);
+					
+					if (FPaths::DirectoryExists(AnimationSearchPath))
+					{
+						TArray<FString> TempPaths;
+						IFileManager::Get().FindFilesRecursive(TempPaths, *AnimationSearchPath, TEXT("*.uasset"), true, false);
+						AnimationAssetPaths.Append(TempPaths);
+						
+						UE_LOG(LogTemp, Display, TEXT("✅ 在路径 %s 找到 %d 个文件"), *AnimationSearchPath, TempPaths.Num());
+					}
+					else
+					{
+						UE_LOG(LogTemp, Display, TEXT("❌ 路径不存在: %s"), *AnimationSearchPath);
+					}
+				}
 
 				for (const FString& AssetPath : AnimationAssetPaths)
 				{
-					// 转换物理路径为UE资源路径
+					// 🔧 智能转换物理路径为UE资源路径
 					FString RelativePath = AssetPath;
-					RelativePath.RemoveFromStart(FPaths::ProjectContentDir());
+					FString UEPath;
+					
+					// 移除 .uasset 扩展名
 					RelativePath.RemoveFromEnd(TEXT(".uasset"));
 					
-					// 路径格式转换
-					FString UEPath = FString::Printf(TEXT("/Game/%s"), *RelativePath);
+					// 判断路径类型并转换
+					if (RelativePath.Contains(TEXT("Plugins")))
+					{
+						// 插件路径：Plugins/PluginName/Content/... -> /PluginName/...
+						int32 PluginIndex = RelativePath.Find(TEXT("Plugins"));
+						if (PluginIndex != INDEX_NONE)
+						{
+							FString PluginPath = RelativePath.Mid(PluginIndex + 8); // 跳过 "Plugins/"
+							
+							int32 SlashIndex = PluginPath.Find(TEXT("/"));
+							if (SlashIndex != INDEX_NONE)
+							{
+								FString PluginName = PluginPath.Left(SlashIndex);
+								FString ContentPath = PluginPath.Mid(SlashIndex + 1);
+								
+								// 移除 Content/ 前缀
+								if (ContentPath.StartsWith(TEXT("Content/")))
+								{
+									ContentPath = ContentPath.Mid(8); // 跳过 "Content/"
+								}
+								
+								UEPath = FString::Printf(TEXT("/%s/%s"), *PluginName, *ContentPath);
+							}
+						}
+					}
+					else
+					{
+						// 主项目路径：Content/... -> /Game/...
+						RelativePath.RemoveFromStart(FPaths::ProjectContentDir());
+						UEPath = FString::Printf(TEXT("/Game/%s"), *RelativePath);
+					}
+					
+					// 路径格式统一化
 					UEPath.ReplaceInline(TEXT("\\"), TEXT("/"));
+					
+					UE_LOG(LogTemp, Display, TEXT("🎯 转换路径: %s -> %s"), *AssetPath, *UEPath);
 
 					// 尝试加载资产
 					UObject* LoadedAsset = LoadObject<UObject>(nullptr, *UEPath);
@@ -477,7 +535,9 @@ void FLomoLibEditorModule::RefreshAnimationAssets()
 	}
 	
 	// 保存设置
+	Settings->MarkPackageDirty();
 	Settings->SaveConfig();
+	Settings->TryUpdateDefaultConfigFile();
 	
 	// 显示结果
 	FString ResultMessage = FString::Printf(TEXT("动画资产刷新完成！\n找到 %d 个动画资产。"), FoundAnimationCount);
@@ -518,7 +578,9 @@ void FLomoLibEditorModule::GenerateReverseAnimations()
 	}
 	
 	// 保存设置
+	Settings->MarkPackageDirty();
 	Settings->SaveConfig();
+	Settings->TryUpdateDefaultConfigFile();
 	
 	// 显示结果
 	FString ResultMessage = FString::Printf(TEXT("反转动画生成完成！\n生成了 %d 个反转动画数据。"), GeneratedCount);
