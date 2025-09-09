@@ -73,7 +73,7 @@ void ALomoGeneralPlayerController::Tick(float DeltaSeconds)
 				CanHitActor = HitActor;
 			}
 			// 在HitActor绘制Debug球体
-			// DrawDebugSphere(GetWorld(), HitResult.Location, 5.0f, 12, FColor::Red, false, 0.1f);
+			// DrawDebugSphere(GetWorld(), HitResult.Location, 1.0f, 12, FColor::Red, false, 0.1f);
 			// UE_LOG(LogLomoLib, Log, TEXT("HitActor: %s"), *HitActor->GetName());
 		}
 
@@ -86,7 +86,7 @@ void ALomoGeneralPlayerController::Tick(float DeltaSeconds)
 		SpringArmCamera->OnHitGround(HitGroundLocation);
 	}
 	
-	CustomTick(DeltaSeconds, OverWidget, HitGround, HitGroundLocation, CanHitActor, HitComponent);
+	CustomTick(DeltaSeconds, OverWidget, HitGround, HitGroundLocation, CanHitActor, HitComponent, HitResult.Location);
 }
 
 void ALomoGeneralPlayerController::DebugDrawTextNearMouse(const FString& InDebugText, const FColor& InColor,

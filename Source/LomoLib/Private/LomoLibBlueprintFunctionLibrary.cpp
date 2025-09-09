@@ -5,6 +5,8 @@
 
 #include "EmptyActor.h"
 #include "Framework/Application/NavigationConfig.h"
+#include "CancellableDelayAction.h"
+#include "Engine/World.h"
 #if WITH_EDITOR
 #include "UnrealEd.h"
 #endif
@@ -37,4 +39,20 @@ FVector ULomoLibBlueprintFunctionLibrary::WorldToRelativeLocation(UObject* World
 	auto RelativeLocation = TempedActor->GetRootComponent()->GetRelativeLocation();
 	TempedActor->Destroy();
 	return RelativeLocation;
+}
+
+void ULomoLibBlueprintFunctionLibrary::DelayWithCancel(const UObject* WorldContextObject, float Duration, FLatentActionInfo LatentInfo, TScriptInterface<ICancellable> CancellableContext)
+{
+	if (UWorld* World = GEngine->GetWorldFromContextObject(WorldContextObject, EGetWorldErrorMode::LogAndReturnNull))
+	{
+		FLatentActionManager& LatentActionManager = World->GetLatentActionManager();
+		
+		// Check if an action with the same UUID already exists, if so don't create a new one
+		if (LatentActionManager.FindExistingAction<FCancellableDelayAction>(LatentInfo.CallbackTarget, LatentInfo.UUID) == nullptr)
+		{
+			// Create and register the new cancellable delay action
+			LatentActionManager.AddNewAction(LatentInfo.CallbackTarget, LatentInfo.UUID, 
+				new FCancellableDelayAction(Duration, LatentInfo, CancellableContext));
+		}
+	}
 }

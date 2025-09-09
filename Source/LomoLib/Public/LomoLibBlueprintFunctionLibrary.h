@@ -5,6 +5,8 @@
 #include "CoreMinimal.h"
 #include "JsonObjectConverter.h"
 #include "Kismet/BlueprintFunctionLibrary.h"
+#include "Engine/LatentActionManager.h"
+#include "ICancellable.h"
 #include "LomoLibBlueprintFunctionLibrary.generated.h"
 
 /**
@@ -34,4 +36,14 @@ public:
 	// 于是写一个函数， 创建一个Actor, 设置到世界坐标, Attach到B,KeepWorldTransform， 然后获取相对位置的方案。
 	UFUNCTION(BlueprintCallable, Category="LomoLib|Debug")
 	static FVector WorldToRelativeLocation(UObject* WorldContext, const FVector& InWorldLocation, AActor* RelativeToActor);
+
+	/**
+	 * 可以取消的延时函数，取消后， 后续函数不会被调用
+	 * @param WorldContextObject The world context object
+	 * @param Duration The duration to delay in seconds
+	 * @param LatentInfo The latent action info for blueprint execution flow
+	 * @param CancellableContext The object that implements ICancellable interface for cancellation checks
+	 */
+	UFUNCTION(BlueprintCallable, meta = (Latent, WorldContext="WorldContextObject", LatentInfo = "LatentInfo", Category = "LomoLib|Async"))
+	static void DelayWithCancel(const UObject* WorldContextObject, float Duration, FLatentActionInfo LatentInfo, TScriptInterface<ICancellable> CancellableContext);
 };
