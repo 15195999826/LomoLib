@@ -4,6 +4,7 @@
 #include "LomoLibBlueprintFunctionLibrary.h"
 
 #include "EmptyActor.h"
+#include "WaitGroupManager.h"
 #include "Framework/Application/NavigationConfig.h"
 #include "CancellableDelayAction.h"
 #include "Engine/World.h"
@@ -41,6 +42,43 @@ FVector ULomoLibBlueprintFunctionLibrary::WorldToRelativeLocation(UObject* World
 	return RelativeLocation;
 }
 
+
+void ULomoLibBlueprintFunctionLibrary::DoneWaitGroupOnce(UObject* WorldContextObject, const int32 InWaitGroupID,
+	const FName InDebugText)
+{
+	if (InWaitGroupID == INDEX_NONE)
+	{
+		return;
+	}
+	
+	auto WaitGroupManager = WorldContextObject->GetWorld()->GetSubsystem<UWaitGroupManager>();
+	auto WG = WaitGroupManager->FindWaitGroup(InWaitGroupID);
+	if (WG)
+	{
+		WG->Done(InDebugText);
+	}
+	else
+	{
+		UE_LOG(LogTemp, Error, TEXT("[DoneOnceWaitGroup]WaitGroupID: %d 不存在, Debug: %s"), InWaitGroupID,
+			   *InDebugText.ToString());
+	}
+}
+
+FFaceRotation ULomoLibBlueprintFunctionLibrary::GetFaceRotation(const FVector& InTargetLocation,
+	const FVector& InSourceLocation)
+{
+	// 计算从源位置到目标位置的方向
+	FVector Direction = FVector(InTargetLocation.X - InSourceLocation.X, 
+		InTargetLocation.Y - InSourceLocation.Y, 0.0f);
+	
+	if (Direction.IsNearlyZero())
+	{
+		return FFaceRotation(false, FRotator::ZeroRotator);
+	}
+	
+	FRotator FaceRotation = Direction.Rotation();
+	return FFaceRotation(true, FaceRotation);
+}
 void ULomoLibBlueprintFunctionLibrary::DelayWithCancel(const UObject* WorldContextObject, float Duration, FLatentActionInfo LatentInfo, TScriptInterface<ICancellable> CancellableContext)
 {
 	if (UWorld* World = GEngine->GetWorldFromContextObject(WorldContextObject, EGetWorldErrorMode::LogAndReturnNull))

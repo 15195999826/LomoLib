@@ -25,6 +25,9 @@
 #include "ContentBrowserModule.h"
 #include "IContentBrowserSingleton.h"
 #include "PythonBridge.h"
+#include "Settings/ProgramAnimationSettings.h"
+#include "Animation/ProgramAnimationDataAsset.h"
+#include "Misc/MessageDialog.h"
 
 #define LOCTEXT_NAMESPACE "FLomoLibEditorModule"
 
@@ -140,11 +143,29 @@ void FLomoLibEditorModule::RegisterExcelDataTableMenu()
 				LOCTEXT("LomoLibMenuTooltip", "LomoLib 工具集"),
 				FNewToolMenuDelegate::CreateLambda([this](UToolMenu* Menu)
 				{
+					// Excel DataTable 转换器
 					FToolMenuSection& ExcelSection = Menu->AddSection("ExcelDataTable", LOCTEXT("ExcelDataTableMenuHeader", "Excel DataTable 转换器"));
 					ExcelSection.AddMenuEntryWithCommandList(ExcelDataTableCommandsImpl->BatchImport, ExcelDataTableCommands);
 					ExcelSection.AddMenuEntryWithCommandList(ExcelDataTableCommandsImpl->BatchExport, ExcelDataTableCommands);
 					ExcelSection.AddSeparator(NAME_None);
 					ExcelSection.AddMenuEntryWithCommandList(ExcelDataTableCommandsImpl->OpenSettings, ExcelDataTableCommands);
+
+					// 程序动画工具
+					FToolMenuSection& AnimationSection = Menu->AddSection("ProgramAnimation", LOCTEXT("ProgramAnimationMenuHeader", "程序动画工具"));
+					AnimationSection.AddMenuEntry(
+						"RefreshAnimationAssets",
+						LOCTEXT("RefreshAnimationAssets", "刷新动画资产"),
+						LOCTEXT("RefreshAnimationAssetsTooltip", "扫描并更新动画资产映射"),
+						FSlateIcon(),
+						FUIAction(FExecuteAction::CreateRaw(this, &FLomoLibEditorModule::RefreshAnimationAssets))
+					);
+					AnimationSection.AddMenuEntry(
+						"GenerateReverseAnimations", 
+						LOCTEXT("GenerateReverseAnimations", "生成反转动画"),
+						LOCTEXT("GenerateReverseAnimationsTooltip", "根据配置生成反转动画数据"),
+						FSlateIcon(),
+						FUIAction(FExecuteAction::CreateRaw(this, &FLomoLibEditorModule::GenerateReverseAnimations))
+					);
 				}),
 				false,
 				FSlateIcon()
@@ -401,6 +422,169 @@ UDataTable* FLomoLibEditorModule::GetSelectedDataTable()
 	}
 	
 	return nullptr;
+}
+
+void FLomoLibEditorModule::RefreshAnimationAssets()
+{
+	auto* Settings = GetMutableDefault<UProgramAnimationSettings>();
+	
+	// 清空现有的程序动画资产映射
+	Settings->ProgramAnimationAssets.Empty();
+	
+	// 构建程序动画数据资产搜索路径
+	int32 FoundAnimationCount = 0;
+	
+	if (Settings->ProgramAnimationAssetRootDir.Num() > 0)
+	{
+		for (const FString& RootDir : Settings->ProgramAnimationAssetRootDir)
+		{
+			if (!RootDir.IsEmpty())
+			{
+				// 🔧 使用多个路径前缀来查询
+				TArray<FString> SearchPrefixes = {
+					FPaths::ProjectContentDir(),           // 主项目Content目录
+					FPaths::ProjectDir(),                   // 项目根目录
+					FPaths::Combine(FPaths::ProjectDir(), TEXT("Plugins"))  // 插件目录
+				};
+				
+				TArray<FString> AnimationAssetPaths;
+				
+				for (const FString& Prefix : SearchPrefixes)
+				{
+					FString AnimationSearchPath = FPaths::Combine(Prefix, RootDir);
+					
+					UE_LOG(LogTemp, Display, TEXT("🔍 尝试搜索路径: %s"), *AnimationSearchPath);
+					
+					if (FPaths::DirectoryExists(AnimationSearchPath))
+					{
+						TArray<FString> TempPaths;
+						IFileManager::Get().FindFilesRecursive(TempPaths, *AnimationSearchPath, TEXT("*.uasset"), true, false);
+						AnimationAssetPaths.Append(TempPaths);
+						
+						UE_LOG(LogTemp, Display, TEXT("✅ 在路径 %s 找到 %d 个文件"), *AnimationSearchPath, TempPaths.Num());
+					}
+					else
+					{
+						UE_LOG(LogTemp, Display, TEXT("❌ 路径不存在: %s"), *AnimationSearchPath);
+					}
+				}
+
+				for (const FString& AssetPath : AnimationAssetPaths)
+				{
+					// 🔧 智能转换物理路径为UE资源路径
+					FString RelativePath = AssetPath;
+					FString UEPath;
+					
+					// 移除 .uasset 扩展名
+					RelativePath.RemoveFromEnd(TEXT(".uasset"));
+					
+					// 判断路径类型并转换
+					if (RelativePath.Contains(TEXT("Plugins")))
+					{
+						// 插件路径：Plugins/PluginName/Content/... -> /PluginName/...
+						int32 PluginIndex = RelativePath.Find(TEXT("Plugins"));
+						if (PluginIndex != INDEX_NONE)
+						{
+							FString PluginPath = RelativePath.Mid(PluginIndex + 8); // 跳过 "Plugins/"
+							
+							int32 SlashIndex = PluginPath.Find(TEXT("/"));
+							if (SlashIndex != INDEX_NONE)
+							{
+								FString PluginName = PluginPath.Left(SlashIndex);
+								FString ContentPath = PluginPath.Mid(SlashIndex + 1);
+								
+								// 移除 Content/ 前缀
+								if (ContentPath.StartsWith(TEXT("Content/")))
+								{
+									ContentPath = ContentPath.Mid(8); // 跳过 "Content/"
+								}
+								
+								UEPath = FString::Printf(TEXT("/%s/%s"), *PluginName, *ContentPath);
+							}
+						}
+					}
+					else
+					{
+						// 主项目路径：Content/... -> /Game/...
+						RelativePath.RemoveFromStart(FPaths::ProjectContentDir());
+						UEPath = FString::Printf(TEXT("/Game/%s"), *RelativePath);
+					}
+					
+					// 路径格式统一化
+					UEPath.ReplaceInline(TEXT("\\"), TEXT("/"));
+					
+					UE_LOG(LogTemp, Display, TEXT("🎯 转换路径: %s -> %s"), *AssetPath, *UEPath);
+
+					// 尝试加载资产
+					UObject* LoadedAsset = LoadObject<UObject>(nullptr, *UEPath);
+					UProgramAnimationDataAsset* AnimationAsset = Cast<UProgramAnimationDataAsset>(LoadedAsset);
+					
+					if (AnimationAsset)
+					{
+						// 使用资产名称作为Key，软引用作为Value
+						TSoftObjectPtr<UProgramAnimationDataAsset> SoftRef = TSoftObjectPtr<UProgramAnimationDataAsset>(AnimationAsset);
+						
+						Settings->ProgramAnimationAssets.Add(AnimationAsset->AnimationData.AnimationName, SoftRef);
+						FoundAnimationCount++;
+						
+						UE_LOG(LogTemp, Display, TEXT("找到程序动画数据资产: %s (从路径: %s)"), *AnimationAsset->GetName(), *RootDir);
+					}
+				}
+			}
+		}
+	}
+	
+	// 保存设置
+	Settings->MarkPackageDirty();
+	Settings->SaveConfig();
+	Settings->TryUpdateDefaultConfigFile();
+	
+	// 显示结果
+	FString ResultMessage = FString::Printf(TEXT("动画资产刷新完成！\n找到 %d 个动画资产。"), FoundAnimationCount);
+	FMessageDialog::Open(EAppMsgType::Ok, FText::FromString(ResultMessage));
+}
+
+void FLomoLibEditorModule::GenerateReverseAnimations()
+{
+	auto* Settings = GetMutableDefault<UProgramAnimationSettings>();
+	Settings->GeneratedReverseAnimations.Empty();
+	
+	int32 GeneratedCount = 0;
+	
+	// 遍历需要反转的动画
+	for (const FName& AnimationName : Settings->NeedReverseProgramAnimations)
+	{
+		if (Settings->ProgramAnimationAssets.Contains(AnimationName))
+		{
+			auto AnimAsset = Settings->ProgramAnimationAssets[AnimationName].LoadSynchronous();
+			if (AnimAsset)
+			{
+				// 调用静态方法生成反转动画
+				FProgramAnimationData ReverseData = 
+					FProgramAnimationData::GenerateReverseAnimation(AnimAsset->AnimationData);
+				
+				Settings->GeneratedReverseAnimations.Add(ReverseData.AnimationName, ReverseData);
+				GeneratedCount++;
+				
+				UE_LOG(LogTemp, Log, TEXT("Generated reverse animation: %s"), 
+					*ReverseData.AnimationName.ToString());
+			}
+		}
+		else
+		{
+			UE_LOG(LogTemp, Error, TEXT("Failed to generate reverse animation: %s not found"), 
+				*AnimationName.ToString());
+		}
+	}
+	
+	// 保存设置
+	Settings->MarkPackageDirty();
+	Settings->SaveConfig();
+	Settings->TryUpdateDefaultConfigFile();
+	
+	// 显示结果
+	FString ResultMessage = FString::Printf(TEXT("反转动画生成完成！\n生成了 %d 个反转动画数据。"), GeneratedCount);
+	FMessageDialog::Open(EAppMsgType::Ok, FText::FromString(ResultMessage));
 }
 
 #undef LOCTEXT_NAMESPACE
