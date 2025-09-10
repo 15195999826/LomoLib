@@ -94,3 +94,51 @@ void ULomoLibBlueprintFunctionLibrary::DelayWithCancel(const UObject* WorldConte
 		}
 	}
 }
+
+// Template specialization for float
+template<>
+float ULomoLibBlueprintFunctionLibrary::GetUserConfig<float>(const FString& InKey, const float& InDefaultValue)
+{
+	float Ret;
+	if (GConfig->GetFloat(TEXT("Project"), *InKey, Ret, GGameUserSettingsIni))
+	{
+		return Ret;
+	}
+	return InDefaultValue;
+}
+
+// Template specialization for int32
+template<>
+int32 ULomoLibBlueprintFunctionLibrary::GetUserConfig<int32>(const FString& InKey, const int32& InDefaultValue)
+{
+	int32 Ret;
+	if (GConfig->GetInt(TEXT("Project"), *InKey, Ret, GGameUserSettingsIni))
+	{
+		return Ret;
+	}
+	return InDefaultValue;
+}
+
+// Template specialization for bool
+template<>
+bool ULomoLibBlueprintFunctionLibrary::GetUserConfig<bool>(const FString& InKey, const bool& InDefaultValue)
+{
+	bool Ret;
+	if (GConfig->GetBool(TEXT("Project"), *InKey, Ret, GGameUserSettingsIni))
+	{
+		return Ret;
+	}
+	return InDefaultValue;
+}
+
+// Template specialization for FString
+template<>
+FString ULomoLibBlueprintFunctionLibrary::GetUserConfig<FString>(const FString& InKey, const FString& InDefaultValue)
+{
+	FString Ret;
+	if (GConfig->GetString(TEXT("Project"), *InKey, Ret, GGameUserSettingsIni))
+	{
+		return Ret;
+	}
+	return InDefaultValue;
+}

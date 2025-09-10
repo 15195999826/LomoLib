@@ -85,7 +85,7 @@ TArray<UUserWidget*> URapidUIRoot::FindAllWidgetsByClass(TSubclassOf<UUserWidget
 	return Result;
 }
 
-bool URapidUIRoot::RemoveWidgetByName(const FName& WidgetName)
+bool URapidUIRoot::RemoveWidgetByName(FName WidgetName)
 {
 	UUserWidget* Widget = FindWidgetByName(WidgetName);
 	if (Widget)

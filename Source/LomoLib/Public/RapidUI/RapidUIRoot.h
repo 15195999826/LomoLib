@@ -69,7 +69,7 @@ public:
 
 	// 移除指定名称的Widget
 	UFUNCTION(BlueprintCallable, Category = "RapidUI")
-	bool RemoveWidgetByName(const FName& WidgetName);
+	bool RemoveWidgetByName(FName WidgetName);
 
 	// 注册已经存在的Widget到映射表中(用于手动管理)
 	UFUNCTION(BlueprintCallable, Category = "RapidUI")

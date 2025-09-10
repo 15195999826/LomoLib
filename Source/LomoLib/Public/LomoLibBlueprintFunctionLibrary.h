@@ -78,4 +78,21 @@ public:
 	 */
 	UFUNCTION(BlueprintCallable, meta = (Latent, WorldContext="WorldContextObject", LatentInfo = "LatentInfo", Category = "LomoLib|Async"))
 	static void DelayWithCancel(const UObject* WorldContextObject, float Duration, FLatentActionInfo LatentInfo, TScriptInterface<ICancellable> CancellableContext);
+
+	// Template function for getting user config values of different types
+	template<typename T>
+	static T GetUserConfig(const FString& InKey, const T& InDefaultValue);
+
+	// Explicit template specializations
+	template<>
+	float GetUserConfig<float>(const FString& InKey, const float& InDefaultValue);
+
+	template<>
+	int32 GetUserConfig<int32>(const FString& InKey, const int32& InDefaultValue);
+
+	template<>
+	bool GetUserConfig<bool>(const FString& InKey, const bool& InDefaultValue);
+
+	template<>
+	FString GetUserConfig<FString>(const FString& InKey, const FString& InDefaultValue);
 };
