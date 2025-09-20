@@ -7,6 +7,7 @@
 #include "Kismet/BlueprintFunctionLibrary.h"
 #include "Engine/LatentActionManager.h"
 #include "ICancellable.h"
+#include "Animation/ProgramAnimationTypes.h"
 #include "LomoLibBlueprintFunctionLibrary.generated.h"
 USTRUCT(BlueprintType)
 struct LOMOLIB_API FFaceRotation
@@ -95,4 +96,11 @@ public:
 
 	template<>
 	FString GetUserConfig<FString>(const FString& InKey, const FString& InDefaultValue);
+
+	// ====== For ProgramAnimation ======
+	UFUNCTION(BlueprintCallable, BlueprintPure)
+	static const FProgramAnimationData& GetProgramAnimationData(const FName& InAniName);
+
+	UFUNCTION(BlueprintCallable, BlueprintPure, meta = (WorldContext = "WorldContextObject"))
+	static FProgramAnimationData RotateProgramAnimationData(const FName& InAniName, const FVector& InDirection, const FVector& BaseAnimationDirection = FVector(1,0,0));
 };

@@ -7,7 +7,9 @@
 #include "WaitGroupManager.h"
 #include "Framework/Application/NavigationConfig.h"
 #include "CancellableDelayAction.h"
+#include "LomoLib.h"
 #include "Engine/World.h"
+#include "Settings/ProgramAnimationSettings.h"
 #if WITH_EDITOR
 #include "UnrealEd.h"
 #endif
@@ -141,4 +143,141 @@ FString ULomoLibBlueprintFunctionLibrary::GetUserConfig<FString>(const FString& 
 		return Ret;
 	}
 	return InDefaultValue;
+}
+
+const FProgramAnimationData& ULomoLibBlueprintFunctionLibrary::GetProgramAnimationData(const FName& InAniName)
+{
+	auto ProgramSettings = GetDefault<UProgramAnimationSettings>();
+	if (ProgramSettings->ProgramAnimationAssets.Contains(InAniName))
+	{
+		auto AnimationDataAsset = ProgramSettings->ProgramAnimationAssets[InAniName].LoadSynchronous();
+		return AnimationDataAsset->AnimationData;
+	}
+
+	if (ProgramSettings->GeneratedReverseAnimations.Contains(InAniName))
+	{
+		return ProgramSettings->GeneratedReverseAnimations[InAniName];
+	}
+	
+	static FProgramAnimationData EmptyData;
+	UE_LOG(LogLomoLib, Error, TEXT("[GetProgramAnimationData] 未找到对应的动画数据: %s"), *InAniName.ToString());
+	return EmptyData;
+}
+
+FProgramAnimationData ULomoLibBlueprintFunctionLibrary::RotateProgramAnimationData(
+	const FName& InAniName, const FVector& InDirection, const FVector& BaseAnimationDirection)
+{
+	// Copy
+	FProgramAnimationData ResultData = GetProgramAnimationData(InAniName);
+
+	// 默认方向和目标方向
+	FVector TargetDirection = InDirection.GetSafeNormal();
+	
+	// 如果目标方向与默认方向相同，直接返回原始数据
+	if (TargetDirection.Equals(BaseAnimationDirection, 0.01f))
+	{
+		return ResultData;
+	}
+	
+	// 计算从默认方向到目标方向的Z轴旋转角度
+	float RotationAngle = FMath::Atan2(TargetDirection.X, -TargetDirection.Y); // 注意：默认方向是(0,-1,0)
+	FQuat ZRotation = FQuat(FVector::UpVector, RotationAngle);
+	
+	// 特殊情况：对于相对的方向（180度），使用简单的Y轴镜像
+	float DirectionFactor = FVector::DotProduct(BaseAnimationDirection, TargetDirection);
+	bool bUseSimpleMirror = FMath::Abs(DirectionFactor + 1.0f) < 0.01f; // 点积接近-1时为相对方向
+	
+	
+	// 对锚点位置进行变换
+	for (FProgramAnimationAnchor& Anchor : ResultData.AnchorTimeSegments)
+	{
+		FVector OriginalLocation = Anchor.AnchorLocation;
+		
+		if (bUseSimpleMirror)
+		{
+			// 相对方向使用Y轴镜像
+			Anchor.AnchorLocation.Y = -Anchor.AnchorLocation.Y;
+		}
+		else if (!FMath::IsNearlyZero(RotationAngle))
+		{
+			// 其他方向使用Z轴旋转
+			Anchor.AnchorLocation = ZRotation.RotateVector(OriginalLocation);
+		}
+		
+	}
+	
+	// 对默认锚点也进行相同处理
+	if (!ResultData.DefaultAnchorLocation.IsZero())
+	{
+		FVector OriginalDefaultAnchor = ResultData.DefaultAnchorLocation;
+		
+		if (bUseSimpleMirror)
+		{
+			ResultData.DefaultAnchorLocation.Y = -ResultData.DefaultAnchorLocation.Y;
+		}
+		else if (!FMath::IsNearlyZero(RotationAngle))
+		{
+			ResultData.DefaultAnchorLocation = ZRotation.RotateVector(OriginalDefaultAnchor);
+		}
+	}
+	
+	// 对所有关键帧的旋转和位移进行变换
+	for (FProgramAnimationKeyFrame& KeyFrame : ResultData.KeyFrames)
+	{
+		FQuat OriginalRotation = KeyFrame.Transform.GetRotation();
+		FVector OriginalLocation = KeyFrame.Transform.GetLocation();
+		
+		if (!OriginalRotation.IsIdentity())
+		{
+			if (bUseSimpleMirror)
+			{
+				// 相对方向使用X分量取负
+				FQuat NewRotation = FQuat(-OriginalRotation.X, OriginalRotation.Y, OriginalRotation.Z, OriginalRotation.W);
+				KeyFrame.Transform.SetRotation(NewRotation);
+			}
+			else if (!FMath::IsNearlyZero(RotationAngle))
+			{
+				// 其他方向使用旋转轴变换
+				// 获取原始旋转的轴和角度
+				FVector OriginalAxis;
+				float OriginalAngle;
+				OriginalRotation.ToAxisAndAngle(OriginalAxis, OriginalAngle);
+				
+				// 将原始旋转轴也进行Z轴旋转变换
+				FVector NewRotationAxis = ZRotation.RotateVector(OriginalAxis);
+				
+				// 创建绕新轴的旋转
+				FQuat NewRotation = FQuat(NewRotationAxis, OriginalAngle);
+				KeyFrame.Transform.SetRotation(NewRotation);
+				
+			}
+		}
+		
+		// 对关键帧位移进行变换（与旋转使用相同逻辑）
+		if (!OriginalLocation.IsZero())
+		{
+			if (bUseSimpleMirror)
+			{
+				// 相对方向使用Y轴镜像
+				FVector NewLocation = OriginalLocation;
+				NewLocation.Y = -NewLocation.Y;
+				KeyFrame.Transform.SetLocation(NewLocation);
+			}
+			else if (!FMath::IsNearlyZero(RotationAngle))
+			{
+				// 其他方向使用Z轴旋转
+				FVector NewLocation = ZRotation.RotateVector(OriginalLocation);
+				KeyFrame.Transform.SetLocation(NewLocation);
+			}
+		}
+		
+		// 忽略关键帧缩放（按用户要求）
+	}
+	
+	// 更新动画名称以区分不同方向
+	FString DirectionString = FString::Printf(TEXT("%s_Dir_%.1f_%.1f_%.1f"), *InAniName.ToString(),
+		TargetDirection.X, TargetDirection.Y, TargetDirection.Z);
+	ResultData.AnimationName = FName(DirectionString);
+	
+	return ResultData;
 }

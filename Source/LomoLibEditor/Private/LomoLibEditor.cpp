@@ -28,6 +28,12 @@
 #include "Settings/ProgramAnimationSettings.h"
 #include "Animation/ProgramAnimationDataAsset.h"
 #include "Misc/MessageDialog.h"
+#include "AssetToolsModule.h"
+#include "IAssetTools.h"
+#include "Factories/Factory.h"
+#include "UObject/SavePackage.h"
+#include "UObject/Package.h"
+#include "PackageTools.h"
 
 #define LOCTEXT_NAMESPACE "FLomoLibEditorModule"
 
