@@ -17,5 +17,9 @@ class LOMOLIBEDITOR_API ULomoLibEditorBlueprintFunctionLibrary : public UBluepri
 
 	// 创建程序动画资产
 	UFUNCTION(BlueprintCallable)
-	static bool CreateProgramAnimationDataAsset(const FProgramAnimationData& AnimationData, const FString& AssetPath);
+	static EProgramAnimationAssetCreateResult CreateProgramAnimationDataAsset(
+		const FProgramAnimationData& AnimationData, 
+		const FString& AssetPath,
+		bool bOverwrite = true
+	);
 };

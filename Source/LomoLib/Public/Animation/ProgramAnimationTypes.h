@@ -23,6 +23,14 @@ enum class EProgramAnimationPlayMode : uint8
 	Loop		UMETA(DisplayName = "Loop"),
 };
 
+UENUM(BlueprintType)
+enum class EProgramAnimationAssetCreateResult : uint8
+{
+	Success		UMETA(DisplayName = "创建成功"),
+	Overwritten	UMETA(DisplayName = "覆盖成功"),
+	Failed		UMETA(DisplayName = "创建失败")
+};
+
 /**
  *
  * ● 📝 Complement模式解释
