@@ -2,6 +2,7 @@
 
 #include "Animation/ProgramAniComponent.h"
 #include "Animation/ProgramAnimationDataAsset.h"
+#include "Animation/AnimationSmoothDataManager.h"
 #include "Settings/ProgramAnimationSettings.h"
 #include "WaitGroupManager.h"
 
@@ -455,11 +456,71 @@ FTransform UProgramAniComponent::GetKeyFrameTransform(float ElapsedTime, const F
 		{
 			// 在两个关键帧之间进行插值
 			float Alpha = (ElapsedTime - KeyFrames[i].Time) / (KeyFrames[i + 1].Time - KeyFrames[i].Time);
-			Alpha = ApplyCurveType(Alpha, AnimationData.CurveType);
 			
-			FTransform Result;
-			Result.Blend(KeyFrames[i].Transform, KeyFrames[i + 1].Transform, Alpha);
-			return Result;
+			// Smooth模式使用向量Hermite插值 - 真正的3D轨迹平滑
+			if (AnimationData.CurveType == EProgramAnimationCurveType::Smooth)
+			{
+				// 获取预计算数据管理器
+				auto* SmoothManager = GetWorld()->GetSubsystem<UAnimationSmoothDataManager>();
+				if (!SmoothManager)
+				{
+					UE_LOG(LogTemp, Error, TEXT("ProgramAniComponent: AnimationSmoothDataManager not available, falling back to linear interpolation"));
+					// 降级为线性插值
+					FTransform Result;
+					Result.Blend(KeyFrames[i].Transform, KeyFrames[i + 1].Transform, Alpha);
+					return Result;
+				}
+				
+				// 获取或创建预计算数据
+				const FAnimationSmoothData* SmoothData = SmoothManager->GetOrCreateSmoothData(AnimationData.AnimationName, AnimationData);
+				if (!SmoothData || !SmoothData->IsValid())
+				{
+					UE_LOG(LogTemp, Warning, TEXT("ProgramAniComponent: Failed to get smooth data for animation '%s', falling back to linear interpolation"), 
+						*AnimationData.AnimationName.ToString());
+					// 降级为线性插值
+					FTransform Result;
+					Result.Blend(KeyFrames[i].Transform, KeyFrames[i + 1].Transform, Alpha);
+					return Result;
+				}
+				
+				const FTransform& T0 = KeyFrames[i].Transform;
+				const FTransform& T1 = KeyFrames[i + 1].Transform;
+				
+				// 使用预计算的切线进行Location向量Hermite插值
+				const FVector& LocationTangent0 = SmoothData->LocationTangents[i];
+				const FVector& LocationTangent1 = SmoothData->LocationTangents[i + 1];
+				FVector SmoothLocation = VectorHermiteInterpolate(
+					T0.GetLocation(), T1.GetLocation(), 
+					LocationTangent0, LocationTangent1, Alpha
+				);
+				
+				// 使用预计算的切线进行Scale向量Hermite插值
+				const FVector& ScaleTangent0 = SmoothData->ScaleTangents[i];
+				const FVector& ScaleTangent1 = SmoothData->ScaleTangents[i + 1];
+				FVector SmoothScale = VectorHermiteInterpolate(
+					T0.GetScale3D(), T1.GetScale3D(),
+					ScaleTangent0, ScaleTangent1, Alpha
+				);
+				
+				// Rotation继续使用Slerp插值（四元数的最佳插值方法）
+				FQuat SmoothRotation = FQuat::Slerp(T0.GetRotation(), T1.GetRotation(), Alpha);
+				
+				// 组装最终Transform
+				FTransform Result;
+				Result.SetLocation(SmoothLocation);
+				Result.SetRotation(SmoothRotation);
+				Result.SetScale3D(SmoothScale);
+				return Result;
+			}
+			else
+			{
+				// 其他模式使用原有逻辑
+				Alpha = ApplyCurveType(Alpha, AnimationData.CurveType);
+				
+				FTransform Result;
+				Result.Blend(KeyFrames[i].Transform, KeyFrames[i + 1].Transform, Alpha);
+				return Result;
+			}
 		}
 	}
 
@@ -487,8 +548,221 @@ float UProgramAniComponent::ApplyCurveType(float Alpha, EProgramAnimationCurveTy
 	case EProgramAnimationCurveType::Bezier:
 		// 简单的3次贝塞尔曲线近似
 		return Alpha * Alpha * (3.0f - 2.0f * Alpha);
+	case EProgramAnimationCurveType::Smooth:
+		// Smooth模式使用特殊的多关键帧插值，这里暂时返回Alpha
+		// 实际插值在关键帧处理中进行
+		return Alpha;
 	default:
 		return Alpha;
+	}
+}
+
+// Hermite插值核心函数 - 对标UE5 RCIM_Cubic
+float UProgramAniComponent::HermiteInterpolate(float P0, float P1, float T0, float T1, float Alpha) const
+{
+	float Alpha2 = Alpha * Alpha;
+	float Alpha3 = Alpha2 * Alpha;
+	
+	// Hermite基函数
+	float h1 = 2*Alpha3 - 3*Alpha2 + 1;   // P0权重
+	float h2 = -2*Alpha3 + 3*Alpha2;      // P1权重  
+	float h3 = Alpha3 - 2*Alpha2 + Alpha; // T0权重
+	float h4 = Alpha3 - Alpha2;           // T1权重
+	
+	return h1*P0 + h2*P1 + h3*T0 + h4*T1;
+}
+
+// 向量Hermite插值 - 真正的3D轨迹平滑
+FVector UProgramAniComponent::VectorHermiteInterpolate(const FVector& P0, const FVector& P1, const FVector& T0, const FVector& T1, float Alpha) const
+{
+	float Alpha2 = Alpha * Alpha;
+	float Alpha3 = Alpha2 * Alpha;
+	
+	// Hermite基函数
+	float h1 = 2*Alpha3 - 3*Alpha2 + 1;   // P0权重
+	float h2 = -2*Alpha3 + 3*Alpha2;      // P1权重  
+	float h3 = Alpha3 - 2*Alpha2 + Alpha; // T0权重
+	float h4 = Alpha3 - Alpha2;           // T1权重
+	
+	return h1*P0 + h2*P1 + h3*T0 + h4*T1;
+}
+
+// 计算Location向量的切线
+FVector UProgramAniComponent::CalculateLocationTangent(const TArray<FProgramAnimationKeyFrame>& KeyFrames, int32 KeyIndex) const
+{
+	if (KeyFrames.Num() < 2) return FVector::ZeroVector;
+	
+	if (KeyIndex == 0)
+	{
+		// 第一个关键帧：使用与下一个关键帧的方向
+		return KeyFrames[1].Transform.GetLocation() - KeyFrames[0].Transform.GetLocation();
+	}
+	else if (KeyIndex == KeyFrames.Num() - 1)
+	{
+		// 最后一个关键帧：使用与前一个关键帧的方向
+		return KeyFrames[KeyIndex].Transform.GetLocation() - KeyFrames[KeyIndex-1].Transform.GetLocation();
+	}
+	else
+	{
+		// 中间关键帧：使用前后关键帧的平均方向，确保C1连续性
+		FVector PrevToThis = KeyFrames[KeyIndex].Transform.GetLocation() - KeyFrames[KeyIndex-1].Transform.GetLocation();
+		FVector ThisToNext = KeyFrames[KeyIndex+1].Transform.GetLocation() - KeyFrames[KeyIndex].Transform.GetLocation();
+		
+		// 根据时间间隔加权平均，保证速度连续性
+		float PrevTimeDiff = KeyFrames[KeyIndex].Time - KeyFrames[KeyIndex-1].Time;
+		float NextTimeDiff = KeyFrames[KeyIndex+1].Time - KeyFrames[KeyIndex].Time;
+		
+		if (PrevTimeDiff > 0 && NextTimeDiff > 0)
+		{
+			// 标准化为单位时间的速度，然后加权平均
+			FVector PrevVelocity = PrevToThis / PrevTimeDiff;
+			FVector NextVelocity = ThisToNext / NextTimeDiff;
+			FVector AvgVelocity = (PrevVelocity + NextVelocity) * 0.5f;
+			
+			// 转换回当前时间段的切线长度
+			return AvgVelocity * NextTimeDiff;
+		}
+		else
+		{
+			// 备用方案：简单平均
+			return (ThisToNext + PrevToThis) * 0.5f;
+		}
+	}
+}
+
+// 计算Scale向量的切线
+FVector UProgramAniComponent::CalculateScaleTangent(const TArray<FProgramAnimationKeyFrame>& KeyFrames, int32 KeyIndex) const
+{
+	if (KeyFrames.Num() < 2) return FVector::ZeroVector;
+	
+	if (KeyIndex == 0)
+	{
+		return KeyFrames[1].Transform.GetScale3D() - KeyFrames[0].Transform.GetScale3D();
+	}
+	else if (KeyIndex == KeyFrames.Num() - 1)
+	{
+		return KeyFrames[KeyIndex].Transform.GetScale3D() - KeyFrames[KeyIndex-1].Transform.GetScale3D();
+	}
+	else
+	{
+		FVector PrevToThis = KeyFrames[KeyIndex].Transform.GetScale3D() - KeyFrames[KeyIndex-1].Transform.GetScale3D();
+		FVector ThisToNext = KeyFrames[KeyIndex+1].Transform.GetScale3D() - KeyFrames[KeyIndex].Transform.GetScale3D();
+		
+		// 时间加权平均（与Location切线计算逻辑相同）
+		float PrevTimeDiff = KeyFrames[KeyIndex].Time - KeyFrames[KeyIndex-1].Time;
+		float NextTimeDiff = KeyFrames[KeyIndex+1].Time - KeyFrames[KeyIndex].Time;
+		
+		if (PrevTimeDiff > 0 && NextTimeDiff > 0)
+		{
+			FVector PrevVelocity = PrevToThis / PrevTimeDiff;
+			FVector NextVelocity = ThisToNext / NextTimeDiff;
+			FVector AvgVelocity = (PrevVelocity + NextVelocity) * 0.5f;
+			return AvgVelocity * NextTimeDiff;
+		}
+		else
+		{
+			return (ThisToNext + PrevToThis) * 0.5f;
+		}
+	}
+}
+
+// 计算平滑的时间Alpha - 基于关键帧时间的Hermite插值
+float UProgramAniComponent::CalculateSmoothTimeAlpha(const TArray<FProgramAnimationKeyFrame>& KeyFrames, int32 CurrentKeyIndex, float RawAlpha) const
+{
+	if (KeyFrames.Num() < 2) return RawAlpha;
+	
+	// 计算时间轴上的切线（基于相邻关键帧的时间间隔）
+	float InTangent = 0.0f;
+	float OutTangent = 0.0f;
+	
+	// 计算当前关键帧段的进入切线
+	if (CurrentKeyIndex > 0)
+	{
+		float PrevTimeDiff = KeyFrames[CurrentKeyIndex].Time - KeyFrames[CurrentKeyIndex - 1].Time;
+		float CurrentTimeDiff = KeyFrames[CurrentKeyIndex + 1].Time - KeyFrames[CurrentKeyIndex].Time;
+		InTangent = (PrevTimeDiff + CurrentTimeDiff) * 0.5f; // 平均时间间隔作为切线权重
+	}
+	else
+	{
+		InTangent = KeyFrames[CurrentKeyIndex + 1].Time - KeyFrames[CurrentKeyIndex].Time;
+	}
+	
+	// 计算下一个关键帧段的离开切线  
+	if (CurrentKeyIndex + 1 < KeyFrames.Num() - 1)
+	{
+		float CurrentTimeDiff = KeyFrames[CurrentKeyIndex + 1].Time - KeyFrames[CurrentKeyIndex].Time;
+		float NextTimeDiff = KeyFrames[CurrentKeyIndex + 2].Time - KeyFrames[CurrentKeyIndex + 1].Time;
+		OutTangent = (CurrentTimeDiff + NextTimeDiff) * 0.5f;
+	}
+	else
+	{
+		OutTangent = KeyFrames[CurrentKeyIndex + 1].Time - KeyFrames[CurrentKeyIndex].Time;
+	}
+	
+	// 使用Hermite插值计算平滑的时间进度
+	// P0=0, P1=1 (归一化的段内进度)，T0和T1为切线权重
+	float NormalizedTangent0 = InTangent * 0.1f;  // 缩放切线影响
+	float NormalizedTangent1 = OutTangent * 0.1f;
+	
+	return HermiteInterpolate(0.0f, 1.0f, NormalizedTangent0, NormalizedTangent1, RawAlpha);
+}
+
+// 计算关键帧的切线（基于相邻关键帧）
+float UProgramAniComponent::CalculateKeyFrameTangent(const TArray<FProgramAnimationKeyFrame>& KeyFrames, int32 KeyIndex, bool bIsInTangent, int32 ComponentIndex) const
+{
+	if (KeyFrames.Num() < 2) return 0.0f;
+	
+	// 获取关键帧的Transform分量值
+	auto GetComponentValue = [](const FTransform& Transform, int32 CompIndex) -> float
+	{
+		switch (CompIndex)
+		{
+			case 0: return Transform.GetLocation().X;
+			case 1: return Transform.GetLocation().Y;
+			case 2: return Transform.GetLocation().Z;
+			case 3: return Transform.GetRotation().X;
+			case 4: return Transform.GetRotation().Y;
+			case 5: return Transform.GetRotation().Z;
+			case 6: return Transform.GetRotation().W;
+			case 7: return Transform.GetScale3D().X;
+			case 8: return Transform.GetScale3D().Y;
+			case 9: return Transform.GetScale3D().Z;
+			default: return 0.0f;
+		}
+	};
+	
+	// 边界处理
+	if (KeyIndex == 0)
+	{
+		// 第一个关键帧：使用与下一个关键帧的差值
+		if (KeyFrames.Num() > 1)
+		{
+			float TimeDiff = KeyFrames[1].Time - KeyFrames[0].Time;
+			float ValueDiff = GetComponentValue(KeyFrames[1].Transform, ComponentIndex) - GetComponentValue(KeyFrames[0].Transform, ComponentIndex);
+			return TimeDiff > 0 ? ValueDiff / TimeDiff : 0.0f;
+		}
+		return 0.0f;
+	}
+	else if (KeyIndex == KeyFrames.Num() - 1)
+	{
+		// 最后一个关键帧：使用与前一个关键帧的差值
+		float TimeDiff = KeyFrames[KeyIndex].Time - KeyFrames[KeyIndex-1].Time;
+		float ValueDiff = GetComponentValue(KeyFrames[KeyIndex].Transform, ComponentIndex) - GetComponentValue(KeyFrames[KeyIndex-1].Transform, ComponentIndex);
+		return TimeDiff > 0 ? ValueDiff / TimeDiff : 0.0f;
+	}
+	else
+	{
+		// 中间关键帧：使用前后关键帧的平均斜率
+		float PrevTimeDiff = KeyFrames[KeyIndex].Time - KeyFrames[KeyIndex-1].Time;
+		float NextTimeDiff = KeyFrames[KeyIndex+1].Time - KeyFrames[KeyIndex].Time;
+		float PrevValueDiff = GetComponentValue(KeyFrames[KeyIndex].Transform, ComponentIndex) - GetComponentValue(KeyFrames[KeyIndex-1].Transform, ComponentIndex);
+		float NextValueDiff = GetComponentValue(KeyFrames[KeyIndex+1].Transform, ComponentIndex) - GetComponentValue(KeyFrames[KeyIndex].Transform, ComponentIndex);
+		
+		float PrevSlope = PrevTimeDiff > 0 ? PrevValueDiff / PrevTimeDiff : 0.0f;
+		float NextSlope = NextTimeDiff > 0 ? NextValueDiff / NextTimeDiff : 0.0f;
+		
+		// 返回平均斜率
+		return (PrevSlope + NextSlope) * 0.5f;
 	}
 }
 

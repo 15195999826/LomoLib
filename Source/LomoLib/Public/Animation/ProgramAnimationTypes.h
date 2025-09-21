@@ -13,7 +13,8 @@ enum class EProgramAnimationCurveType : uint8
 	EaseIn		UMETA(DisplayName = "EaseIn"),
 	EaseOut		UMETA(DisplayName = "EaseOut"),
 	EaseInOut	UMETA(DisplayName = "EaseInOut"),
-	Bezier		UMETA(DisplayName = "Bezier")
+	Bezier		UMETA(DisplayName = "Bezier"),
+	Smooth		UMETA(DisplayName = "Smooth")
 };
 
 UENUM(BlueprintType)
@@ -30,35 +31,6 @@ enum class EProgramAnimationAssetCreateResult : uint8
 	Overwritten	UMETA(DisplayName = "覆盖成功"),
 	Failed		UMETA(DisplayName = "创建失败")
 };
-
-/**
- *
- * ● 📝 Complement模式解释
- *
- *  我用一个具体例子来说明：
- *
- *  🎯 场景：手牌悬停动画
- *  - HoverUp动画：从位置0弹到位置100（进度0→1）
- *  - HoverDown动画：从位置100回到位置0（进度0→1，但实际效果是1→0）
- *
- *  ⚡ Complement的含义
- *
- *  假设HoverUp动画播放到30%时被中断：
- *  - 当前SharedProgress = 0.3
- *  - 手牌实际位置在30（0到100的30%处）
- *
- *  此时播放HoverDown，如果使用Complement模式：
- *  - 新动画从进度 1 - 0.3 = 0.7 开始播放
- *  - 这意味着HoverDown动画跳过前70%，直接从70%开始
- *  - 手牌从当前位置30开始下降到0
- *
- */
-// UENUM(BlueprintType)
-// enum class EProgramAnimationStartMode : uint8
-// {
-// 	FromStart	UMETA(DisplayName = "FromStart"),
-// 	Complement	UMETA(DisplayName = "Complement")
-// };
 
 /**
  * 锚点时间段结构体
@@ -290,7 +262,7 @@ struct FProgramAnimationData
 				ReverseData.CurveType = EProgramAnimationCurveType::EaseIn;
 			break;
 			default:
-				// Linear, EaseInOut, Bezier保持不变
+				// Linear, EaseInOut, Bezier, Smooth保持不变
 					break;
 		}
 		
@@ -335,5 +307,95 @@ struct FProgramAnimationData
 		// Algo::Reverse(ReverseData.AnchorTimeSegments);
 		
 		return ReverseData;
+	}
+};
+
+/**
+ *
+ * ● 📝 Complement模式解释
+ *
+ *  我用一个具体例子来说明：
+ *
+ *  🎯 场景：手牌悬停动画
+ *  - HoverUp动画：从位置0弹到位置100（进度0→1）
+ *  - HoverDown动画：从位置100回到位置0（进度0→1，但实际效果是1→0）
+ *
+ *  ⚡ Complement的含义
+ *
+ *  假设HoverUp动画播放到30%时被中断：
+ *  - 当前SharedProgress = 0.3
+ *  - 手牌实际位置在30（0到100的30%处）
+ *
+ *  此时播放HoverDown，如果使用Complement模式：
+ *  - 新动画从进度 1 - 0.3 = 0.7 开始播放
+ *  - 这意味着HoverDown动画跳过前70%，直接从70%开始
+ *  - 手牌从当前位置30开始下降到0
+ *
+ */
+// UENUM(BlueprintType)
+// enum class EProgramAnimationStartMode : uint8
+// {
+// 	FromStart	UMETA(DisplayName = "FromStart"),
+// 	Complement	UMETA(DisplayName = "Complement")
+// };
+
+/**
+ * Smooth模式预计算数据结构体
+ * 缓存每个关键帧的切线向量，避免运行时重复计算
+ */
+USTRUCT()
+struct LOMOLIB_API FAnimationSmoothData
+{
+	GENERATED_BODY()
+	
+	// 每个关键帧的Location切线向量
+	UPROPERTY()
+	TArray<FVector> LocationTangents;
+	
+	// 每个关键帧的Scale切线向量
+	UPROPERTY()
+	TArray<FVector> ScaleTangents;
+	
+	// 动画总时长（用于验证数据有效性）
+	UPROPERTY()
+	float Duration = 0.0f;
+	
+	// 关键帧数量（用于验证）
+	UPROPERTY()
+	int32 KeyFrameCount = 0;
+	
+	// 关键帧时间戳（用于验证数据是否匹配）
+	UPROPERTY()
+	TArray<float> KeyFrameTimes;
+	
+	FAnimationSmoothData()
+	{
+		Duration = 0.0f;
+		KeyFrameCount = 0;
+	}
+	
+	// 验证数据是否有效且匹配
+	bool IsValid() const 
+	{
+		return LocationTangents.Num() == KeyFrameCount && 
+			   ScaleTangents.Num() == KeyFrameCount && 
+			   KeyFrameTimes.Num() == KeyFrameCount &&
+			   Duration > 0.0f && KeyFrameCount > 0;
+	}
+	
+	// 验证数据是否匹配给定的动画数据
+	bool MatchesAnimationData(const FProgramAnimationData& AnimationData) const
+	{
+		if (!IsValid() || AnimationData.KeyFrames.Num() != KeyFrameCount) 
+			return false;
+			
+		// 检查时间戳是否匹配
+		for (int32 i = 0; i < KeyFrameCount; i++)
+		{
+			if (!FMath::IsNearlyEqual(KeyFrameTimes[i], AnimationData.KeyFrames[i].Time, 0.001f))
+				return false;
+		}
+		
+		return FMath::IsNearlyEqual(Duration, AnimationData.Duration, 0.001f);
 	}
 };
