@@ -172,11 +172,7 @@ private:
 	// 工具函数
 	float GetProgramMoveAlpha(float ElapsedTime) const;
 	FTransform GetKeyFrameTransform(float ElapsedTime, const FProgramAnimationData& AnimationData) const;
-	float ApplyCurveType(float Alpha, EProgramAnimationCurveType CurveType) const;
-	
-	// Smooth插值相关函数
-	FVector VectorHermiteInterpolate(const FVector& P0, const FVector& P1, const FVector& T0, const FVector& T1, float Alpha) const;
-	float CalculateKeyFrameTangent(const TArray<FProgramAnimationKeyFrame>& KeyFrames, int32 KeyIndex, bool bIsInTangent, int32 ComponentIndex) const;
+	static float ApplyCurveType(float Alpha, EProgramAnimationCurveType CurveType);
 	
 	FTransform CalculateFinalTransform() const;
 	FVector GetProgramMoveLocation(float ElapsedTime) const;

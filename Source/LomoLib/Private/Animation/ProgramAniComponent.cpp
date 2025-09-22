@@ -454,54 +454,22 @@ FTransform UProgramAniComponent::GetKeyFrameTransform(float ElapsedTime, const F
 		return KeyFrames[0].Transform;
 	}
 
-	// 查找当前时间在哪两个关键帧之间
-	for (int32 i = 0; i < KeyFrames.Num() - 1; i++)
+	if (AnimationData.CurveType == EProgramAnimationCurveType::Smooth)
 	{
-		if (ElapsedTime >= KeyFrames[i].Time && ElapsedTime <= KeyFrames[i + 1].Time)
+		auto SmoothManager = GetWorld()->GetSubsystem<UAnimationSmoothDataManager>();
+		const FAnimationSmoothData* SmoothData = SmoothManager->GetOrCreateSmoothData(AnimationData.AnimationName, AnimationData);
+		return SmoothManager->GetSmoothKeyFrameTransform(ElapsedTime, AnimationData, SmoothData);
+	}
+	else
+	{
+		// 查找当前时间在哪两个关键帧之间
+		for (int32 i = 0; i < KeyFrames.Num() - 1; i++)
 		{
-			// 在两个关键帧之间进行插值
-			float Alpha = (ElapsedTime - KeyFrames[i].Time) / (KeyFrames[i + 1].Time - KeyFrames[i].Time);
+			if (ElapsedTime >= KeyFrames[i].Time && ElapsedTime <= KeyFrames[i + 1].Time)
+			{
+				// 在两个关键帧之间进行插值
+				float Alpha = (ElapsedTime - KeyFrames[i].Time) / (KeyFrames[i + 1].Time - KeyFrames[i].Time);
 			
-			// Smooth模式使用向量Hermite插值 - 真正的3D轨迹平滑
-			if (AnimationData.CurveType == EProgramAnimationCurveType::Smooth)
-			{
-				// 获取预计算数据管理器
-				auto* SmoothManager = GetWorld()->GetSubsystem<UAnimationSmoothDataManager>();
-				
-				// 获取或创建预计算数据
-				const FAnimationSmoothData* SmoothData = SmoothManager->GetOrCreateSmoothData(AnimationData.AnimationName, AnimationData);
-				
-				const FTransform& T0 = KeyFrames[i].Transform;
-				const FTransform& T1 = KeyFrames[i + 1].Transform;
-				
-				// 使用预计算的切线进行Location向量Hermite插值
-				const FVector& LocationTangent0 = SmoothData->LocationTangents[i];
-				const FVector& LocationTangent1 = SmoothData->LocationTangents[i + 1];
-				FVector SmoothLocation = VectorHermiteInterpolate(
-					T0.GetLocation(), T1.GetLocation(), 
-					LocationTangent0, LocationTangent1, Alpha
-				);
-				
-				// 使用预计算的切线进行Scale向量Hermite插值
-				const FVector& ScaleTangent0 = SmoothData->ScaleTangents[i];
-				const FVector& ScaleTangent1 = SmoothData->ScaleTangents[i + 1];
-				FVector SmoothScale = VectorHermiteInterpolate(
-					T0.GetScale3D(), T1.GetScale3D(),
-					ScaleTangent0, ScaleTangent1, Alpha
-				);
-				
-				// Rotation继续使用Slerp插值（四元数的最佳插值方法）
-				FQuat SmoothRotation = FQuat::Slerp(T0.GetRotation(), T1.GetRotation(), Alpha);
-				
-				// 组装最终Transform
-				FTransform Result;
-				Result.SetLocation(SmoothLocation);
-				Result.SetRotation(SmoothRotation);
-				Result.SetScale3D(SmoothScale);
-				return Result;
-			}
-			else
-			{
 				// 其他模式使用原有逻辑
 				Alpha = ApplyCurveType(Alpha, AnimationData.CurveType);
 				
@@ -511,6 +479,7 @@ FTransform UProgramAniComponent::GetKeyFrameTransform(float ElapsedTime, const F
 			}
 		}
 	}
+	
 
 	// 超出范围的情况
 	if (ElapsedTime <= KeyFrames[0].Time)
@@ -521,7 +490,7 @@ FTransform UProgramAniComponent::GetKeyFrameTransform(float ElapsedTime, const F
 	return KeyFrames.Last().Transform;
 }
 
-float UProgramAniComponent::ApplyCurveType(float Alpha, EProgramAnimationCurveType CurveType) const
+float UProgramAniComponent::ApplyCurveType(float Alpha, EProgramAnimationCurveType CurveType)
 {
 	switch (CurveType)
 	{
@@ -542,80 +511,6 @@ float UProgramAniComponent::ApplyCurveType(float Alpha, EProgramAnimationCurveTy
 		return Alpha;
 	default:
 		return Alpha;
-	}
-}
-
-// 向量Hermite插值 - 真正的3D轨迹平滑
-FVector UProgramAniComponent::VectorHermiteInterpolate(const FVector& P0, const FVector& P1, const FVector& T0, const FVector& T1, float Alpha) const
-{
-	float Alpha2 = Alpha * Alpha;
-	float Alpha3 = Alpha2 * Alpha;
-	
-	// Hermite基函数
-	float h1 = 2*Alpha3 - 3*Alpha2 + 1;   // P0权重
-	float h2 = -2*Alpha3 + 3*Alpha2;      // P1权重  
-	float h3 = Alpha3 - 2*Alpha2 + Alpha; // T0权重
-	float h4 = Alpha3 - Alpha2;           // T1权重
-	
-	return h1*P0 + h2*P1 + h3*T0 + h4*T1;
-}
-
-// 计算关键帧的切线（基于相邻关键帧）
-float UProgramAniComponent::CalculateKeyFrameTangent(const TArray<FProgramAnimationKeyFrame>& KeyFrames, int32 KeyIndex, bool bIsInTangent, int32 ComponentIndex) const
-{
-	if (KeyFrames.Num() < 2) return 0.0f;
-	
-	// 获取关键帧的Transform分量值
-	auto GetComponentValue = [](const FTransform& Transform, int32 CompIndex) -> float
-	{
-		switch (CompIndex)
-		{
-			case 0: return Transform.GetLocation().X;
-			case 1: return Transform.GetLocation().Y;
-			case 2: return Transform.GetLocation().Z;
-			case 3: return Transform.GetRotation().X;
-			case 4: return Transform.GetRotation().Y;
-			case 5: return Transform.GetRotation().Z;
-			case 6: return Transform.GetRotation().W;
-			case 7: return Transform.GetScale3D().X;
-			case 8: return Transform.GetScale3D().Y;
-			case 9: return Transform.GetScale3D().Z;
-			default: return 0.0f;
-		}
-	};
-	
-	// 边界处理
-	if (KeyIndex == 0)
-	{
-		// 第一个关键帧：使用与下一个关键帧的差值
-		if (KeyFrames.Num() > 1)
-		{
-			float TimeDiff = KeyFrames[1].Time - KeyFrames[0].Time;
-			float ValueDiff = GetComponentValue(KeyFrames[1].Transform, ComponentIndex) - GetComponentValue(KeyFrames[0].Transform, ComponentIndex);
-			return TimeDiff > 0 ? ValueDiff / TimeDiff : 0.0f;
-		}
-		return 0.0f;
-	}
-	else if (KeyIndex == KeyFrames.Num() - 1)
-	{
-		// 最后一个关键帧：使用与前一个关键帧的差值
-		float TimeDiff = KeyFrames[KeyIndex].Time - KeyFrames[KeyIndex-1].Time;
-		float ValueDiff = GetComponentValue(KeyFrames[KeyIndex].Transform, ComponentIndex) - GetComponentValue(KeyFrames[KeyIndex-1].Transform, ComponentIndex);
-		return TimeDiff > 0 ? ValueDiff / TimeDiff : 0.0f;
-	}
-	else
-	{
-		// 中间关键帧：使用前后关键帧的平均斜率
-		float PrevTimeDiff = KeyFrames[KeyIndex].Time - KeyFrames[KeyIndex-1].Time;
-		float NextTimeDiff = KeyFrames[KeyIndex+1].Time - KeyFrames[KeyIndex].Time;
-		float PrevValueDiff = GetComponentValue(KeyFrames[KeyIndex].Transform, ComponentIndex) - GetComponentValue(KeyFrames[KeyIndex-1].Transform, ComponentIndex);
-		float NextValueDiff = GetComponentValue(KeyFrames[KeyIndex+1].Transform, ComponentIndex) - GetComponentValue(KeyFrames[KeyIndex].Transform, ComponentIndex);
-		
-		float PrevSlope = PrevTimeDiff > 0 ? PrevValueDiff / PrevTimeDiff : 0.0f;
-		float NextSlope = NextTimeDiff > 0 ? NextValueDiff / NextTimeDiff : 0.0f;
-		
-		// 返回平均斜率
-		return (PrevSlope + NextSlope) * 0.5f;
 	}
 }
 
