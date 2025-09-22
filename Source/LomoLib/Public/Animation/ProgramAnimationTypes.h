@@ -382,20 +382,4 @@ struct LOMOLIB_API FAnimationSmoothData
 			   KeyFrameTimes.Num() == KeyFrameCount &&
 			   Duration > 0.0f && KeyFrameCount > 0;
 	}
-	
-	// 验证数据是否匹配给定的动画数据
-	bool MatchesAnimationData(const FProgramAnimationData& AnimationData) const
-	{
-		if (!IsValid() || AnimationData.KeyFrames.Num() != KeyFrameCount) 
-			return false;
-			
-		// 检查时间戳是否匹配
-		for (int32 i = 0; i < KeyFrameCount; i++)
-		{
-			if (!FMath::IsNearlyEqual(KeyFrameTimes[i], AnimationData.KeyFrames[i].Time, 0.001f))
-				return false;
-		}
-		
-		return FMath::IsNearlyEqual(Duration, AnimationData.Duration, 0.001f);
-	}
 };

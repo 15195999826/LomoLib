@@ -31,17 +31,8 @@ const FAnimationSmoothData* UAnimationSmoothDataManager::GetOrCreateSmoothData(c
 	// 检查缓存是否存在且有效
 	if (FAnimationSmoothData* CachedData = SmoothDataCache.Find(AnimationName))
 	{
-		if (CachedData->MatchesAnimationData(AnimationData))
-		{
-			// 缓存命中且数据匹配
-			return CachedData;
-		}
-		else
-		{
-			// 数据不匹配，需要重新计算
-			UE_LOG(LogTemp, Log, TEXT("AnimationSmoothDataManager: Animation '%s' data mismatch, recomputing..."), 
-				*AnimationName.ToString());
-		}
+		// 缓存命中且数据匹配
+		return CachedData;
 	}
 	
 	// 创建新的预计算数据
@@ -133,37 +124,34 @@ FVector UAnimationSmoothDataManager::CalculateLocationTangent(const TArray<FProg
 		// 第一个关键帧：使用与下一个关键帧的方向
 		return KeyFrames[1].Transform.GetLocation() - KeyFrames[0].Transform.GetLocation();
 	}
-	else if (KeyIndex == KeyFrames.Num() - 1)
+
+	if (KeyIndex == KeyFrames.Num() - 1)
 	{
 		// 最后一个关键帧：使用与前一个关键帧的方向
 		return KeyFrames[KeyIndex].Transform.GetLocation() - KeyFrames[KeyIndex-1].Transform.GetLocation();
 	}
-	else
+
+	// 中间关键帧：使用前后关键帧的平均方向，确保C1连续性
+	FVector PrevToThis = KeyFrames[KeyIndex].Transform.GetLocation() - KeyFrames[KeyIndex-1].Transform.GetLocation();
+	FVector ThisToNext = KeyFrames[KeyIndex+1].Transform.GetLocation() - KeyFrames[KeyIndex].Transform.GetLocation();
+		
+	// 根据时间间隔加权平均，保证速度连续性
+	float PrevTimeDiff = KeyFrames[KeyIndex].Time - KeyFrames[KeyIndex-1].Time;
+	float NextTimeDiff = KeyFrames[KeyIndex+1].Time - KeyFrames[KeyIndex].Time;
+		
+	if (PrevTimeDiff > 0 && NextTimeDiff > 0)
 	{
-		// 中间关键帧：使用前后关键帧的平均方向，确保C1连续性
-		FVector PrevToThis = KeyFrames[KeyIndex].Transform.GetLocation() - KeyFrames[KeyIndex-1].Transform.GetLocation();
-		FVector ThisToNext = KeyFrames[KeyIndex+1].Transform.GetLocation() - KeyFrames[KeyIndex].Transform.GetLocation();
-		
-		// 根据时间间隔加权平均，保证速度连续性
-		float PrevTimeDiff = KeyFrames[KeyIndex].Time - KeyFrames[KeyIndex-1].Time;
-		float NextTimeDiff = KeyFrames[KeyIndex+1].Time - KeyFrames[KeyIndex].Time;
-		
-		if (PrevTimeDiff > 0 && NextTimeDiff > 0)
-		{
-			// 标准化为单位时间的速度，然后加权平均
-			FVector PrevVelocity = PrevToThis / PrevTimeDiff;
-			FVector NextVelocity = ThisToNext / NextTimeDiff;
-			FVector AvgVelocity = (PrevVelocity + NextVelocity) * 0.5f;
+		// 标准化为单位时间的速度，然后加权平均
+		FVector PrevVelocity = PrevToThis / PrevTimeDiff;
+		FVector NextVelocity = ThisToNext / NextTimeDiff;
+		FVector AvgVelocity = (PrevVelocity + NextVelocity) * 0.5f;
 			
-			// 转换回当前时间段的切线长度
-			return AvgVelocity * NextTimeDiff;
-		}
-		else
-		{
-			// 备用方案：简单平均
-			return (ThisToNext + PrevToThis) * 0.5f;
-		}
+		// 转换回当前时间段的切线长度
+		return AvgVelocity * NextTimeDiff;
 	}
+
+	// 备用方案：简单平均
+	return (ThisToNext + PrevToThis) * 0.5f;
 }
 
 FVector UAnimationSmoothDataManager::CalculateScaleTangent(const TArray<FProgramAnimationKeyFrame>& KeyFrames, int32 KeyIndex)
@@ -174,29 +162,26 @@ FVector UAnimationSmoothDataManager::CalculateScaleTangent(const TArray<FProgram
 	{
 		return KeyFrames[1].Transform.GetScale3D() - KeyFrames[0].Transform.GetScale3D();
 	}
-	else if (KeyIndex == KeyFrames.Num() - 1)
+
+	if (KeyIndex == KeyFrames.Num() - 1)
 	{
 		return KeyFrames[KeyIndex].Transform.GetScale3D() - KeyFrames[KeyIndex-1].Transform.GetScale3D();
 	}
-	else
+
+	FVector PrevToThis = KeyFrames[KeyIndex].Transform.GetScale3D() - KeyFrames[KeyIndex-1].Transform.GetScale3D();
+	FVector ThisToNext = KeyFrames[KeyIndex+1].Transform.GetScale3D() - KeyFrames[KeyIndex].Transform.GetScale3D();
+		
+	// 时间加权平均（与Location切线计算逻辑相同）
+	float PrevTimeDiff = KeyFrames[KeyIndex].Time - KeyFrames[KeyIndex-1].Time;
+	float NextTimeDiff = KeyFrames[KeyIndex+1].Time - KeyFrames[KeyIndex].Time;
+		
+	if (PrevTimeDiff > 0 && NextTimeDiff > 0)
 	{
-		FVector PrevToThis = KeyFrames[KeyIndex].Transform.GetScale3D() - KeyFrames[KeyIndex-1].Transform.GetScale3D();
-		FVector ThisToNext = KeyFrames[KeyIndex+1].Transform.GetScale3D() - KeyFrames[KeyIndex].Transform.GetScale3D();
-		
-		// 时间加权平均（与Location切线计算逻辑相同）
-		float PrevTimeDiff = KeyFrames[KeyIndex].Time - KeyFrames[KeyIndex-1].Time;
-		float NextTimeDiff = KeyFrames[KeyIndex+1].Time - KeyFrames[KeyIndex].Time;
-		
-		if (PrevTimeDiff > 0 && NextTimeDiff > 0)
-		{
-			FVector PrevVelocity = PrevToThis / PrevTimeDiff;
-			FVector NextVelocity = ThisToNext / NextTimeDiff;
-			FVector AvgVelocity = (PrevVelocity + NextVelocity) * 0.5f;
-			return AvgVelocity * NextTimeDiff;
-		}
-		else
-		{
-			return (ThisToNext + PrevToThis) * 0.5f;
-		}
+		FVector PrevVelocity = PrevToThis / PrevTimeDiff;
+		FVector NextVelocity = ThisToNext / NextTimeDiff;
+		FVector AvgVelocity = (PrevVelocity + NextVelocity) * 0.5f;
+		return AvgVelocity * NextTimeDiff;
 	}
+
+	return (ThisToNext + PrevToThis) * 0.5f;
 }
