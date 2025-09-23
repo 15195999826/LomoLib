@@ -81,10 +81,6 @@ void AGeneralPreloaderActor::LoadPerFrame()
 		GetWorld()->GetTimerManager().SetTimerForNextTick(this, &AGeneralPreloaderActor::LoadPerFrame);
 		return;
 	}
-#else
-	// Todo: 打包后预加载一般跟项目强相关, 暂时不做处理, 未来有需要考虑暴露的接口的设计
-	return;
-#endif
 
 	if (TempStaticMeshCursor < PreloadData.StaticMeshes.Num())
 	{
@@ -134,6 +130,10 @@ void AGeneralPreloaderActor::LoadPerFrame()
 	}
 
 	GetWorld()->GetTimerManager().SetTimerForNextTick(this, &AGeneralPreloaderActor::LoadPerFrame);
+#else
+	// Todo: 打包后预加载一般跟项目强相关, 暂时不做处理, 未来有需要考虑暴露的接口的设计
+	return;
+#endif
 }
 
 bool AGeneralPreloaderActor::PIEAreCompiling() const
